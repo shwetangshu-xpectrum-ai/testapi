@@ -748,9 +748,9 @@ print(data)`;
       <aside className={`api-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="api-brand">
           <div className="api-logo">
-            <img src="/logo.svg" alt="ccai logo" width="20" height="20" />
+            <img src="/logo.svg" alt="ai logo" width="20" height="20" />
           </div>
-          <h3 className="logo-text">ccai</h3>
+          <h3 className="logo-text">xpectrum-ai</h3>
           <div className="theme-toggle">
             <img src="/moon.svg" alt="dark mode" width="16" height="16" />
           </div>
