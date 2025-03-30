@@ -36,6 +36,7 @@ const ApiDoc: React.FC = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
@@ -622,6 +623,41 @@ const ApiDoc: React.FC = () => {
 
   const currentEndpoint = endpointData[activeEndpoint] || endpointData.getAllEmployees;
 
+  // Filter endpoints based on search term
+  const filterEndpoints = (endpoints: string[], term: string): string[] => {
+    if (!term) return endpoints;
+    const lowerTerm = term.toLowerCase();
+    return endpoints.filter(endpoint => {
+      const endpoint_data = endpointData[endpoint];
+      return (
+        endpoint.toLowerCase().includes(lowerTerm) || 
+        endpoint_data.title.toLowerCase().includes(lowerTerm) ||
+        endpoint_data.url.toLowerCase().includes(lowerTerm) ||
+        endpoint_data.method.toLowerCase().includes(lowerTerm) ||
+        endpoint_data.breadcrumb.toLowerCase().includes(lowerTerm)
+      );
+    });
+  };
+
+  // Get filtered endpoints for each category
+  const getFilteredEndpointsForCategory = (category: string): string[] => {
+    const categoryPrefixMap: {[key: string]: string} = {
+      'employee': 'Employee',
+      'salary': 'Salary',
+      'payroll': 'Payroll',
+      'leave': 'Leave',
+      'insurance': 'Insurance',
+      'policies': 'Policies'
+    };
+    
+    const prefix = categoryPrefixMap[category] || '';
+    const categoryEndpoints = Object.keys(endpointData).filter(endpoint => 
+      endpointData[endpoint].breadcrumb.toLowerCase() === category.toLowerCase()
+    );
+    
+    return filterEndpoints(categoryEndpoints, searchTerm);
+  };
+
   const handleCategoryClick = (category: string) => {
     if (animating) return;
     
@@ -880,7 +916,12 @@ print(data)`;
         </div>
         
         <div className="search-bar">
-          <input type="text" placeholder="Search" />
+          <input 
+            type="text" 
+            placeholder="Search endpoints..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         
         <div className="sidebar-section">
@@ -893,62 +934,19 @@ print(data)`;
             <span className="chevron">▼</span>
           </div>
           <ul className={`section-links ${openCategories.includes('employee') ? 'visible' : 'hidden'}`}>
-            <li 
-              className={`section-link ${activeEndpoint === 'getAllEmployees' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getAllEmployees', event)}
-              data-endpoint="getAllEmployees"
-            >
-              <span>Get All Employees</span>
-              <span className="method-tag get">GET</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'getOneEmployee' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getOneEmployee', event)}
-              data-endpoint="getOneEmployee"
-            >
-              <span>Get One Employee</span>
-              <span className="method-tag get">GET</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'getEmployee' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getEmployee', event)}
-              data-endpoint="getEmployee"
-            >
-              <span>Get Employee</span>
-              <span className="method-tag get">GET</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'getEmployeeById' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getEmployeeById', event)}
-              data-endpoint="getEmployeeById"
-            >
-              <span>Get Employee by ID</span>
-              <span className="method-tag get">GET</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'createEmployee' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('createEmployee', event)}
-              data-endpoint="createEmployee"
-            >
-              <span>Create Employee</span>
-              <span className="method-tag post">POST</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'updateEmployee' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('updateEmployee', event)}
-              data-endpoint="updateEmployee"
-            >
-              <span>Update Employee</span>
-              <span className="method-tag put">PUT</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'deleteEmployee' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('deleteEmployee', event)}
-              data-endpoint="deleteEmployee"
-            >
-              <span>Delete Employee</span>
-              <span className="method-tag delete">DELETE</span>
-            </li>
+            {getFilteredEndpointsForCategory('employee').map((endpoint) => (
+              <li 
+                key={endpoint}
+                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
+                data-endpoint={endpoint}
+              >
+                <span>{endpointData[endpoint].title}</span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
+                  {endpointData[endpoint].method}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
         
@@ -962,22 +960,19 @@ print(data)`;
             <span className="chevron">▼</span>
           </div>
           <ul className={`section-links ${openCategories.includes('salary') ? 'visible' : 'hidden'}`}>
-            <li 
-              className={`section-link ${activeEndpoint === 'getSalaryInfo' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getSalaryInfo', event)}
-              data-endpoint="getSalaryInfo"
-            >
-              <span>Get Salary Information</span>
-              <span className="method-tag get">GET</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'updateSalary' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('updateSalary', event)}
-              data-endpoint="updateSalary"
-            >
-              <span>Update Salary</span>
-              <span className="method-tag put">PUT</span>
-            </li>
+            {getFilteredEndpointsForCategory('salary').map((endpoint) => (
+              <li 
+                key={endpoint}
+                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
+                data-endpoint={endpoint}
+              >
+                <span>{endpointData[endpoint].title}</span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
+                  {endpointData[endpoint].method}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
         
@@ -991,14 +986,19 @@ print(data)`;
             <span className="chevron">▼</span>
           </div>
           <ul className={`section-links ${openCategories.includes('payroll') ? 'visible' : 'hidden'}`}>
-            <li 
-              className={`section-link ${activeEndpoint === 'getPayroll' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getPayroll', event)}
-              data-endpoint="getPayroll"
-            >
-              <span>Get Payroll Data</span>
-              <span className="method-tag get">GET</span>
-            </li>
+            {getFilteredEndpointsForCategory('payroll').map((endpoint) => (
+              <li 
+                key={endpoint}
+                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
+                data-endpoint={endpoint}
+              >
+                <span>{endpointData[endpoint].title}</span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
+                  {endpointData[endpoint].method}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
         
@@ -1012,22 +1012,19 @@ print(data)`;
             <span className="chevron">▼</span>
           </div>
           <ul className={`section-links ${openCategories.includes('leave') ? 'visible' : 'hidden'}`}>
-            <li 
-              className={`section-link ${activeEndpoint === 'getLeaveRequests' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getLeaveRequests', event)}
-              data-endpoint="getLeaveRequests"
-            >
-              <span>Get Leave Requests</span>
-              <span className="method-tag get">GET</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'getLeaveBalance' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getLeaveBalance', event)}
-              data-endpoint="getLeaveBalance"
-            >
-              <span>Get Leave Balance</span>
-              <span className="method-tag get">GET</span>
-            </li>
+            {getFilteredEndpointsForCategory('leave').map((endpoint) => (
+              <li 
+                key={endpoint}
+                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
+                data-endpoint={endpoint}
+              >
+                <span>{endpointData[endpoint].title}</span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
+                  {endpointData[endpoint].method}
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
         
