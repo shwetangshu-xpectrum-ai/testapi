@@ -102,6 +102,107 @@ const ApiDoc: React.FC = () => {
 }`
       }
     },
+    getOneEmployee: {
+      title: 'Get One Employee',
+      method: 'GET',
+      url: 'https://api.employeedb.com/v1/employees/one/{employee_code}',
+      badge: 'Developing',
+      breadcrumb: 'Employee',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
+        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
+        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
+        { name: 'x-api-key', type: 'string', required: true, example: '' }
+      ],
+      response: {
+        example: `{
+  "employee_code": "EMP001",
+  "first_name": "John",
+  "last_name": "Smith",
+  "email": "john.smith@example.com",
+  "department": "Engineering",
+  "job_title": "Senior Developer",
+  "hire_date": "2019-06-15",
+  "status": "active",
+  "contact_info": {
+    "phone": "+1 123-456-7890",
+    "address": "123 Main St, San Francisco, CA"
+  }
+}`
+      }
+    },
+    getEmployee: {
+      title: 'Get Employee',
+      method: 'GET',
+      url: 'https://api.employeedb.com/v1/employees/{employee_id}',
+      badge: 'Developing',
+      breadcrumb: 'Employee',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
+        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
+        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
+        { name: 'x-api-key', type: 'string', required: true, example: '' }
+      ],
+      response: {
+        example: `{
+  "id": "EMP001",
+  "first_name": "John",
+  "last_name": "Smith",
+  "email": "john.smith@example.com",
+  "department": "Engineering",
+  "job_title": "Senior Developer",
+  "hire_date": "2019-06-15",
+  "status": "active",
+  "contact_info": {
+    "phone": "+1 123-456-7890",
+    "address": "123 Main St, San Francisco, CA"
+  }
+}`
+      }
+    },
+    getEmployeeById: {
+      title: 'Get Employee by ID',
+      method: 'GET',
+      url: 'https://api.employeedb.com/v1/employees/id/{id}',
+      badge: 'Stable',
+      breadcrumb: 'Employee',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      response: {
+        example: `{
+  "id": "EMP001",
+  "first_name": "John",
+  "last_name": "Smith",
+  "email": "john.smith@example.com",
+  "department": "Engineering",
+  "job_title": "Senior Developer",
+  "hire_date": "2019-06-15",
+  "status": "active",
+  "manager_id": "EMP005",
+  "employment_type": "Full-time",
+  "location": "San Francisco, CA",
+  "contact_info": {
+    "phone": "+1 123-456-7890",
+    "address": "123 Main St, San Francisco, CA",
+    "emergency_contact": {
+      "name": "Jane Smith",
+      "relation": "Spouse",
+      "phone": "+1 123-456-7891"
+    }
+  }
+}`
+      }
+    },
     createEmployee: {
       title: 'Create Employee',
       method: 'POST',
@@ -798,6 +899,30 @@ print(data)`;
               data-endpoint="getAllEmployees"
             >
               <span>Get All Employees</span>
+              <span className="method-tag get">GET</span>
+            </li>
+            <li 
+              className={`section-link ${activeEndpoint === 'getOneEmployee' ? 'active' : ''}`}
+              onClick={(event) => handleMobileEndpointClick('getOneEmployee', event)}
+              data-endpoint="getOneEmployee"
+            >
+              <span>Get One Employee</span>
+              <span className="method-tag get">GET</span>
+            </li>
+            <li 
+              className={`section-link ${activeEndpoint === 'getEmployee' ? 'active' : ''}`}
+              onClick={(event) => handleMobileEndpointClick('getEmployee', event)}
+              data-endpoint="getEmployee"
+            >
+              <span>Get Employee</span>
+              <span className="method-tag get">GET</span>
+            </li>
+            <li 
+              className={`section-link ${activeEndpoint === 'getEmployeeById' ? 'active' : ''}`}
+              onClick={(event) => handleMobileEndpointClick('getEmployeeById', event)}
+              data-endpoint="getEmployeeById"
+            >
+              <span>Get Employee by ID</span>
               <span className="method-tag get">GET</span>
             </li>
             <li 
