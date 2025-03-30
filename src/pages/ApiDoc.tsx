@@ -35,6 +35,7 @@ const ApiDoc: React.FC = () => {
   const [activeEndpoint, setActiveEndpoint] = useState('getAllEmployees');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const dropdownButtonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
@@ -733,8 +734,29 @@ print(data)`;
     }
   };
 
+  // Toggle theme function
+  const toggleTheme = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    
+    // Apply theme classes to document
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark-theme');
+      document.documentElement.classList.remove('light-theme');
+    } else {
+      document.documentElement.classList.add('light-theme');
+      document.documentElement.classList.remove('dark-theme');
+    }
+  };
+
+  // Apply theme class on component mount
+  useEffect(() => {
+    // Initialize with dark theme
+    document.documentElement.classList.add('dark-theme');
+  }, []);
+
   return (
-    <div className={`api-doc-container ${mobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+    <div className={`api-doc-container ${mobileMenuOpen ? 'mobile-menu-open' : ''} ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       {/* Mobile menu toggle */}
       <div className="mobile-menu-toggle" onClick={toggleMobileMenu}>
         <div className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}>
@@ -751,8 +773,8 @@ print(data)`;
             <img src="/logo.svg" alt="ai logo" width="20" height="20" />
           </div>
           <h3 className="logo-text">xpectrum-ai</h3>
-          <div className="theme-toggle">
-            <img src="/moon.svg" alt="dark mode" width="16" height="16" />
+          <div className="theme-toggle" onClick={toggleTheme}>
+            <img src={darkMode ? "/moon.svg" : "/sun.svg"} alt={darkMode ? "light mode" : "dark mode"} width="16" height="16" />
           </div>
         </div>
         
