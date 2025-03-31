@@ -329,7 +329,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_data',
       badge: 'Stable',
       breadcrumb: 'Employee',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'source', type: 'string', required: false, example: 'Example: system' },
+        { name: 'sync', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -370,7 +374,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_data/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Employee',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'source', type: 'string', required: false, example: 'Example: system' },
+        { name: 'notify', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -408,7 +416,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_data/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Employee',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'force', type: 'boolean', required: false, example: 'Example: false' },
+        { name: 'archive', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -453,7 +465,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/salary_info/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Salary',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'backdated', type: 'boolean', required: false, example: 'Example: false' },
+        { name: 'notify', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -488,7 +504,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/salary_info',
       badge: 'Stable',
       breadcrumb: 'Salary',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'backdated', type: 'boolean', required: false, example: 'Example: false' },
+        { name: 'effective_date', type: 'string', required: false, example: 'Example: 2023-06-01' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -581,7 +601,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/payroll',
       badge: 'Stable',
       breadcrumb: 'Payroll',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'tax_year', type: 'string', required: false, example: 'Example: 2023' },
+        { name: 'recalculate', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -639,7 +663,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_insurance_data/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Insurance',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'effective_date', type: 'string', required: false, example: 'Example: 2023-07-01' },
+        { name: 'notify', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -672,7 +700,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_insurance_data',
       badge: 'Stable',
       breadcrumb: 'Insurance',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'immediate', type: 'boolean', required: false, example: 'Example: true' },
+        { name: 'notify_hr', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -767,7 +799,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/insurance_plan',
       badge: 'Stable',
       breadcrumb: 'Insurance',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'effective_date', type: 'string', required: false, example: 'Example: 2023-08-01' },
+        { name: 'company_wide', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -836,7 +872,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_balance_data/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Leave',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'reset', type: 'boolean', required: false, example: 'Example: false' },
+        { name: 'prorate', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -867,7 +907,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_balance_data',
       badge: 'Stable',
       breadcrumb: 'Leave',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'year', type: 'string', required: false, example: 'Example: 2023' },
+        { name: 'prorate', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -974,7 +1018,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_requests',
       badge: 'Stable',
       breadcrumb: 'Leave',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'auto_approve', type: 'boolean', required: false, example: 'Example: false' },
+        { name: 'notify', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
@@ -1014,7 +1062,11 @@ const ApiDoc: React.FC = () => {
       url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_requests/{application_id}',
       badge: 'Stable',
       breadcrumb: 'Leave',
-      queryParams: [],
+      queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
+        { name: 'notify_employee', type: 'boolean', required: false, example: 'Example: true' },
+        { name: 'notify_manager', type: 'boolean', required: false, example: 'Example: true' }
+      ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
