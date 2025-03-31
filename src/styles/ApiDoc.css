@@ -17,7 +17,7 @@
   --hover-bg: rgba(0, 0, 0, 0.08);
   --hover-bg-light: rgba(255, 255, 255, 0.1);
   --primary-purple: #6c40ff;
-  --animate-duration: 0.3s;
+  --animate-duration: 0.5s;
   --search-bg: rgba(29, 32, 37, 0.5);
 }
 
@@ -27,18 +27,18 @@
 }
 
 @keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
+  from { transform: translateY(15px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-10px); opacity: 0; }
+  from { transform: translateY(-15px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes pulse {
   0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  50% { transform: scale(1.03); }
   100% { transform: scale(1); }
 }
 
@@ -65,8 +65,8 @@
     var(--content-bg);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   overflow: hidden;
-  animation: fadeIn 0.5s ease-out;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  animation: fadeIn 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .light-theme .api-doc-container {
@@ -2060,8 +2060,8 @@
 .try-it-modal-close {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: none;
+  background-color: rgba(30, 32, 41, 0.8);
   border: none;
   color: var(--text-color);
   font-size: 20px;
@@ -3322,4 +3322,513 @@
   max-height: 400px;
   overflow-y: auto;
   transition: all 0.3s ease;
+}
+
+.endpoint-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.try-real-api-button {
+  background-color: rgba(0, 128, 223, 0.9);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 128, 223, 0.2);
+}
+
+.try-real-api-button:hover {
+  background-color: rgba(0, 128, 223, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 128, 223, 0.3);
+}
+
+.try-real-api-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 3px rgba(0, 128, 223, 0.2);
+}
+
+.try-real-api-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: 0.5s;
+}
+
+.try-real-api-button:hover::before {
+  left: 100%;
+}
+
+@media (max-width: 768px) {
+  .endpoint-actions {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 12px;
+  }
+  
+  .try-real-api-button,
+  .try-it-button {
+    width: 100%;
+    padding: 10px;
+  }
+  
+  .api-endpoint {
+    flex-wrap: wrap;
+  }
+}
+
+.real-api-params-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: rgba(0, 128, 223, 0.1);
+  border: 1px solid rgba(0, 128, 223, 0.2);
+  position: relative;
+}
+
+.light-theme .real-api-params-section {
+  background-color: rgba(0, 128, 223, 0.05);
+  border: 1px solid rgba(0, 128, 223, 0.15);
+}
+
+.real-api-params-section h3 {
+  color: #0080df !important;
+  font-weight: 600 !important;
+  margin-bottom: 12px !important;
+  display: flex;
+  align-items: center;
+}
+
+.real-api-params-section h3::before {
+  content: '🔗';
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+.real-api-params-section input {
+  border-color: rgba(0, 128, 223, 0.3) !important;
+  background-color: rgba(0, 128, 223, 0.05) !important;
+}
+
+.real-api-params-section input:focus {
+  box-shadow: 0 0 0 2px rgba(0, 128, 223, 0.2) !important;
+}
+
+.real-api-params-section .param-description {
+  color: rgba(0, 128, 223, 0.9);
+  font-style: italic;
+}
+
+.light-theme .real-api-params-section .param-description {
+  color: rgba(0, 128, 223, 0.8);
+}
+
+/* Add these new styles to the end of the file */
+
+/* Real API Configuration Card Styles */
+.real-api-config-card {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.real-api-config-card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.real-api-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 15px;
+}
+
+.real-api-config-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.real-api-badge {
+  background: linear-gradient(90deg, #00b53c, #00d44d);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 8px rgba(0, 180, 60, 0.3);
+}
+
+.config-field-container {
+  margin-bottom: 16px;
+}
+
+.config-field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.config-input-group {
+  display: flex;
+  position: relative;
+}
+
+.config-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.config-input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.config-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.config-edit-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(59, 130, 246, 0.2);
+  border: none;
+  border-radius: 6px;
+  color: #60a5fa;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.config-edit-btn:hover {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.config-edit-btn.save {
+  background: rgba(0, 180, 60, 0.2);
+  color: #4ade80;
+}
+
+.config-edit-btn.save:hover {
+  background: rgba(0, 180, 60, 0.3);
+}
+
+.config-description {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+.config-action-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.test-real-api-button {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.test-real-api-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #4f90f9, #3373ed);
+}
+
+.test-icon {
+  font-size: 16px;
+}
+
+/* Dark mode specific adjustments */
+.dark-theme .real-api-config-card {
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.light-theme .real-api-config-card {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .real-api-config-header h3 {
+  color: #1e293b;
+}
+
+.light-theme .config-field-label {
+  color: #334155;
+}
+
+.light-theme .config-input {
+  background: rgba(240, 245, 250, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+}
+
+.light-theme .config-description {
+  color: #64748b;
+}
+
+/* Add styles for the endpoint-hint */
+.endpoint-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  opacity: 0.8;
+  font-style: italic;
+  max-width: 180px;
+  text-align: center;
+}
+
+.try-real-api-button {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.try-real-api-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #4f90f9, #3373ed);
+}
+
+.try-api-button {
+  margin-top: 0.625rem;
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--primary-purple);
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0.25rem 0.5rem rgba(108, 64, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.try-api-button:hover {
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.375rem 0.75rem rgba(108, 64, 255, 0.25);
+}
+
+.try-api-button:active {
+  transform: translateY(0);
+}
+
+.try-api-button::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  top: 50%;
+  left: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease-out, height 0.4s ease-out;
+}
+
+.try-api-button:hover::before {
+  width: 200%;
+  height: 200%;
+}
+
+/* Try API Button + Test API Button */
+.try-api-button,
+.test-api-button {
+  font-size: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.api-params-section {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 0.625rem;
+  background: rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.light-theme .api-params-section {
+  background: rgba(245, 247, 250, 0.7);
+}
+
+.api-params-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-color);
+  position: relative;
+}
+
+.api-params-section h3::before {
+  content: '';
+  display: inline-block;
+  width: 0.25rem;
+  height: 1.125rem;
+  background-color: var(--primary-purple);
+  margin-right: 0.625rem;
+}
+
+.api-params-section input {
+  width: 100%;
+  padding: 0.625rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+}
+
+.api-params-section input:focus {
+  border-color: var(--primary-purple);
+}
+
+.api-params-section .param-description {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.light-theme .api-params-section .param-description {
+  color: #667085;
+}
+
+/* API Config Card */
+.api-config-card {
+  background: rgba(30, 30, 45, 0.7);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.api-config-card:hover {
+  transform: translateY(-0.25rem);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.2);
+}
+
+.api-config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.api-config-header h3 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: #fff;
+}
+
+.api-badge {
+  background: linear-gradient(90deg, #4CAF50 0%, #2E7D32 100%);
+  color: white;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 0.25rem 0.5rem rgba(76, 175, 80, 0.25);
+}
+
+.test-api-button {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #6C40FF 0%, #7C4DFF 100%);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0.25rem 0.75rem rgba(124, 77, 255, 0.2);
+  margin-top: 1.25rem;
+  width: 100%;
+}
+
+.test-api-button:hover {
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.375rem 1rem rgba(124, 77, 255, 0.3);
+  background: linear-gradient(90deg, #7C4DFF 0%, #6C40FF 100%);
+}
+
+.dark-theme .api-config-card {
+  background: rgba(30, 30, 45, 0.7);
+}
+
+.light-theme .api-config-card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.light-theme .api-config-header h3 {
+  color: #111827;
 }

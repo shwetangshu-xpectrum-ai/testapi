@@ -56,6 +56,80 @@ interface PayrollDataType {
   salary_received_day?: string;
 }
 
+// Interface for employee insurance data
+interface EmployeeInsuranceDataType {
+  employee_id: string;
+  plan_name?: string;
+  insurance_plan_id?: string;
+  enrollment_date?: string;
+  coverage_type?: string;
+  employee_contribution?: number;
+  enrollment_time?: string;
+}
+
+// Interface for insurance data
+interface InsuranceDataType {
+  employee_id: string;
+  plan_name?: string;
+  insurance_plan_id?: string;
+  enrollment_date?: string;
+  coverage_type?: string;
+  employee_contribution?: number;
+  enrollment_time?: string;
+  premium_per_month?: number;
+}
+
+// Interface for insurance plan
+interface InsurancePlanType {
+  plan_name: string;
+  plan_id?: string;
+  network?: string;
+  deductible_individual_family?: string;
+  out_of_pocket_maximum_individual_family?: string;
+  coinsurance?: string;
+  overall_lifetime_maximum?: string;
+  rates_premium_employee_only?: number;
+  rates_premium_employer_contribution_employee_only?: number;
+  rates_premium_employee_contribution_employee_only?: number;
+  rates_premium_employee_spouse?: number;
+  rates_premium_employer_contribution_employee_spouse?: number;
+  rates_premium_employee_contribution_employee_spouse?: number;
+  rates_premium_employee_children?: number;
+  rates_premium_employer_contribution_employee_children?: number;
+  rates_premium_employee_contribution_employee_children?: number;
+  rates_premium_family?: number;
+  rates_premium_employer_contribution_family?: number;
+  rates_premium_employee_contribution_family?: number;
+}
+
+// Interface for leave balance data
+interface LeaveBalanceDataType {
+  employee_id: string;
+  annual_leave_balance?: number;
+  sick_leave_balance?: number;
+  personal_leave_balance?: number;
+  unpaid_leave_taken?: number;
+  leave_balance_updated_date?: string;
+}
+
+// Interface for leave requests
+interface LeaveRequestsType {
+  employee_id?: string;
+  application_id: number;
+  start_date?: string;
+  total_working_days_off?: number;
+  total_days_off?: number;
+  end_date?: string;
+  deduction_from_salary?: number;
+  leave_type?: string;
+  reason?: string;
+  request_date?: string;
+  request_time?: string;
+  reviewed_by?: string;
+  status?: string;
+  approved_by?: string;
+}
+
 interface EndpointDataType {
   title: string;
   method: string;
@@ -77,7 +151,7 @@ interface EndpointsType {
 const ApiDoc: React.FC = () => {
   const [activeTab, setActiveTab] = useState('shell');
   const [responseOpen, setResponseOpen] = useState(true);
-  const [openCategories, setOpenCategories] = useState<string[]>(['employee', 'salary', 'payroll']);
+  const [openCategories, setOpenCategories] = useState<string[]>(['employee', 'salary', 'payroll', 'insurance', 'leave']);
   const [activeEndpoint, setActiveEndpoint] = useState('getAllEmployees');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -102,6 +176,7 @@ const ApiDoc: React.FC = () => {
     statusText: string;
     time: number;
     size: string;
+    headers?: Record<string, string>;
   } | null>(null);
   const [requestHeaders, setRequestHeaders] = useState<{[key: string]: string}>({
     'Content-Type': 'application/json',
@@ -127,15 +202,43 @@ const ApiDoc: React.FC = () => {
     }
   ]);
   const [activeEnvironment, setActiveEnvironment] = useState('Development');
+  const [apiBaseUrl, setApiBaseUrl] = useState('https://hrms-api.xpectrum-ai.com/hrms/api/v1');
+  const [realEmployeeId, setRealEmployeeId] = useState('EM37938');
+
+  // Add a state for editing mode
+  const [isEditingApiConfig, setIsEditingApiConfig] = useState(false);
+
+  // Add a new state variable
+  const [isResponseFromApi, setIsResponseFromApi] = useState(false);
+  
+  // Add state for editable URL
+  const [editableUrl, setEditableUrl] = useState('');
+  const [isEditingUrl, setIsEditingUrl] = useState(false);
+
+  // Initialize apiBaseUrl from localStorage if available
+  useEffect(() => {
+    const savedBaseUrl = localStorage.getItem('apiBaseUrl');
+    if (savedBaseUrl) {
+      setApiBaseUrl(savedBaseUrl);
+    }
+  }, []);
+  
+  // Save apiBaseUrl to localStorage whenever it changes
+  useEffect(() => {
+    if (apiBaseUrl) {
+      localStorage.setItem('apiBaseUrl', apiBaseUrl);
+    }
+  }, [apiBaseUrl]);
 
   const endpointData: EndpointsType = {
     getAllEmployees: {
       title: 'Get All Employees',
       method: 'GET',
-      url: 'https://api.employeedb.com/v1/employees',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/all_employee_data',
       badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [
+        { name: 'api_key', type: 'string', required: true, example: 'Example: xpectrum_api_key_123@ai' },
         { name: 'department', type: 'string', required: false, example: 'Example: Engineering' },
         { name: 'status', type: 'string', required: false, example: 'Example: active' },
         { name: 'page', type: 'integer', required: false, example: 'Example: 1' },
@@ -187,7 +290,7 @@ const ApiDoc: React.FC = () => {
     getEmployeeById: {
       title: 'Get Employee by ID',
       method: 'GET',
-      url: 'https://api.employeedb.com/v1/employees/{employee_id}',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_data/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
@@ -223,7 +326,7 @@ const ApiDoc: React.FC = () => {
     createEmployee: {
       title: 'Create Employee',
       method: 'POST',
-      url: 'https://api.employeedb.com/v1/employees',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_data',
       badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
@@ -264,7 +367,7 @@ const ApiDoc: React.FC = () => {
     updateEmployee: {
       title: 'Update Employee',
       method: 'PUT',
-      url: 'https://api.employeedb.com/v1/employees/{employee_id}',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_data/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
@@ -302,7 +405,7 @@ const ApiDoc: React.FC = () => {
     deleteEmployee: {
       title: 'Delete Employee',
       method: 'DELETE',
-      url: 'https://api.employeedb.com/v1/employees/{employee_id}',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_data/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
@@ -322,7 +425,7 @@ const ApiDoc: React.FC = () => {
     getSalaryInfo: {
       title: 'Get Salary Information',
       method: 'GET',
-      url: 'https://api.employeedb.com/v1/salary/{employee_id}',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/salary_info/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Salary',
       queryParams: [],
@@ -344,10 +447,10 @@ const ApiDoc: React.FC = () => {
 }`
       }
     },
-    updateSalary: {
-      title: 'Update Salary',
+    updateSalaryInfo: {
+      title: 'Update Salary Information',
       method: 'PUT',
-      url: 'https://api.employeedb.com/v1/salary/{employee_id}',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/salary_info/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Salary',
       queryParams: [],
@@ -357,13 +460,13 @@ const ApiDoc: React.FC = () => {
         { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
       bodyParams: [
-        { name: 'base_salary', type: 'number', required: true, example: 'Example: 90000.00' },
+        { name: 'base_salary', type: 'number', required: false, example: 'Example: 90000.00' },
         { name: 'salary_type', type: 'string', required: false, example: 'Example: annual' },
         { name: 'bonus', type: 'number', required: false, example: 'Example: 6000.00' },
-        { name: 'commission', type: 'number', required: false, example: 'Example: 1000.00' },
+        { name: 'commission', type: 'number', required: false, example: 'Example: 2000.00' },
         { name: 'currency', type: 'string', required: false, example: 'Example: USD' },
         { name: 'salary_grade', type: 'string', required: false, example: 'Example: L4' },
-        { name: 'last_salary_increase_date', type: 'string', required: true, example: 'Example: 2023-06-01' }
+        { name: 'last_salary_increase_date', type: 'string', required: false, example: 'Example: 2023-05-01' }
       ],
       response: {
         example: `{
@@ -371,22 +474,56 @@ const ApiDoc: React.FC = () => {
   "base_salary": 90000.00,
   "salary_type": "annual",
   "bonus": 6000.00,
-  "commission": 1000.00,
+  "commission": 2000.00,
   "currency": "USD",
   "salary_grade": "L4",
-  "last_salary_increase_date": "2023-06-01",
-  "updated_at": "2023-05-25T14:20:10Z"
+  "last_salary_increase_date": "2023-05-01",
+  "updated_at": "2023-05-20T14:30:45Z"
 }`
       }
     },
-    getPayroll: {
+    createSalaryInfo: {
+      title: 'Create Salary Information',
+      method: 'POST',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/salary_info',
+      badge: 'Stable',
+      breadcrumb: 'Salary',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP003' },
+        { name: 'base_salary', type: 'number', required: true, example: 'Example: 75000.00' },
+        { name: 'salary_type', type: 'string', required: true, example: 'Example: annual' },
+        { name: 'bonus', type: 'number', required: false, example: 'Example: 2000.00' },
+        { name: 'commission', type: 'number', required: false, example: 'Example: 0.00' },
+        { name: 'currency', type: 'string', required: false, example: 'Example: USD' },
+        { name: 'salary_grade', type: 'string', required: false, example: 'Example: L2' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP003",
+  "base_salary": 75000.00,
+  "salary_type": "annual",
+  "bonus": 2000.00,
+  "commission": 0.00,
+  "currency": "USD",
+  "salary_grade": "L2",
+  "created_at": "2023-05-22T10:15:20Z"
+}`
+      }
+    },
+    getPayrollData: {
       title: 'Get Payroll Data',
       method: 'GET',
-      url: 'https://api.employeedb.com/v1/payroll/{employee_id}',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/payroll/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Payroll',
       queryParams: [
-        { name: 'month', type: 'string', required: false, example: 'Example: 2023-06' }
+        { name: 'month', type: 'string', required: false, example: 'Example: 2023-05' }
       ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
@@ -396,19 +533,52 @@ const ApiDoc: React.FC = () => {
       response: {
         example: `{
   "employee_id": "EMP001",
-  "base_salary": 7083.33,
-  "federal_tax": 1770.83,
-  "state_tax": 566.67,
-  "total_tax": 2337.50,
-  "month": "2023-06",
-  "salary_received_day": "2023-06-30"
+  "base_salary": 85000.00,
+  "federal_tax": 1458.33,
+  "state_tax": 625.00,
+  "total_tax": 2083.33,
+  "month": "2023-05",
+  "salary_received_day": "2023-05-30"
 }`
       }
     },
-    createPayroll: {
-      title: 'Create Payroll Entry',
+    updatePayrollData: {
+      title: 'Update Payroll Data',
+      method: 'PUT',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/payroll/{employee_id}',
+      badge: 'Stable',
+      breadcrumb: 'Payroll',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'base_salary', type: 'number', required: false, example: 'Example: 85000.00' },
+        { name: 'federal_tax', type: 'number', required: false, example: 'Example: 1458.33' },
+        { name: 'state_tax', type: 'number', required: false, example: 'Example: 625.00' },
+        { name: 'total_tax', type: 'number', required: false, example: 'Example: 2083.33' },
+        { name: 'month', type: 'string', required: true, example: 'Example: 2023-05' },
+        { name: 'salary_received_day', type: 'string', required: false, example: 'Example: 2023-05-30' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP001",
+  "base_salary": 85000.00,
+  "federal_tax": 1458.33,
+  "state_tax": 625.00,
+  "total_tax": 2083.33,
+  "month": "2023-05",
+  "salary_received_day": "2023-05-30",
+  "updated_at": "2023-05-25T09:45:12Z"
+}`
+      }
+    },
+    createPayrollData: {
+      title: 'Create Payroll Data',
       method: 'POST',
-      url: 'https://api.employeedb.com/v1/payroll',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/payroll',
       badge: 'Stable',
       breadcrumb: 'Payroll',
       queryParams: [],
@@ -419,23 +589,462 @@ const ApiDoc: React.FC = () => {
       ],
       bodyParams: [
         { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP001' },
-        { name: 'base_salary', type: 'number', required: true, example: 'Example: 7083.33' },
-        { name: 'federal_tax', type: 'number', required: true, example: 'Example: 1770.83' },
-        { name: 'state_tax', type: 'number', required: true, example: 'Example: 566.67' },
-        { name: 'total_tax', type: 'number', required: true, example: 'Example: 2337.50' },
+        { name: 'base_salary', type: 'number', required: true, example: 'Example: 85000.00' },
+        { name: 'federal_tax', type: 'number', required: true, example: 'Example: 1458.33' },
+        { name: 'state_tax', type: 'number', required: true, example: 'Example: 625.00' },
+        { name: 'total_tax', type: 'number', required: true, example: 'Example: 2083.33' },
         { name: 'month', type: 'string', required: true, example: 'Example: 2023-06' },
         { name: 'salary_received_day', type: 'string', required: true, example: 'Example: 2023-06-30' }
       ],
       response: {
         example: `{
   "employee_id": "EMP001",
-  "base_salary": 7083.33,
-  "federal_tax": 1770.83,
-  "state_tax": 566.67,
-  "total_tax": 2337.50,
+  "base_salary": 85000.00,
+  "federal_tax": 1458.33,
+  "state_tax": 625.00,
+  "total_tax": 2083.33,
   "month": "2023-06",
   "salary_received_day": "2023-06-30",
-  "created_at": "2023-05-25T14:20:10Z"
+  "created_at": "2023-06-01T14:30:20Z"
+}`
+      }
+    },
+    getEmployeeInsuranceData: {
+      title: 'Get Employee Insurance Data',
+      method: 'GET',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_insurance_data/{employee_id}',
+      badge: 'Stable',
+      breadcrumb: 'Insurance',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP001",
+  "plan_name": "Premium Health Plan",
+  "insurance_plan_id": "INS-PLAN-001",
+  "enrollment_date": "2022-01-15",
+  "coverage_type": "family",
+  "employee_contribution": 250.00,
+  "enrollment_time": "10:30:45"
+}`
+      }
+    },
+    updateEmployeeInsuranceData: {
+      title: 'Update Employee Insurance Data',
+      method: 'PUT',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_insurance_data/{employee_id}',
+      badge: 'Stable',
+      breadcrumb: 'Insurance',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'plan_name', type: 'string', required: false, example: 'Example: Gold Health Plan' },
+        { name: 'insurance_plan_id', type: 'string', required: false, example: 'Example: INS-PLAN-002' },
+        { name: 'enrollment_date', type: 'string', required: false, example: 'Example: 2023-01-15' },
+        { name: 'coverage_type', type: 'string', required: false, example: 'Example: employee+spouse' },
+        { name: 'employee_contribution', type: 'number', required: false, example: 'Example: 180.00' },
+        { name: 'enrollment_time', type: 'string', required: false, example: 'Example: 11:45:30' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP001",
+  "plan_name": "Gold Health Plan",
+  "insurance_plan_id": "INS-PLAN-002",
+  "enrollment_date": "2023-01-15",
+  "coverage_type": "employee+spouse",
+  "employee_contribution": 180.00,
+  "enrollment_time": "11:45:30",
+  "updated_at": "2023-02-10T09:15:22Z"
+}`
+      }
+    },
+    createEmployeeInsuranceData: {
+      title: 'Create Employee Insurance Data',
+      method: 'POST',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/employee_insurance_data',
+      badge: 'Stable',
+      breadcrumb: 'Insurance',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP003' },
+        { name: 'plan_name', type: 'string', required: true, example: 'Example: Standard Health Plan' },
+        { name: 'insurance_plan_id', type: 'string', required: true, example: 'Example: INS-PLAN-003' },
+        { name: 'enrollment_date', type: 'string', required: true, example: 'Example: 2023-05-01' },
+        { name: 'coverage_type', type: 'string', required: true, example: 'Example: employee_only' },
+        { name: 'employee_contribution', type: 'number', required: true, example: 'Example: 120.00' },
+        { name: 'enrollment_time', type: 'string', required: false, example: 'Example: 09:30:00' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP003",
+  "plan_name": "Standard Health Plan",
+  "insurance_plan_id": "INS-PLAN-003",
+  "enrollment_date": "2023-05-01",
+  "coverage_type": "employee_only",
+  "employee_contribution": 120.00,
+  "enrollment_time": "09:30:00",
+  "created_at": "2023-05-01T09:30:00Z"
+}`
+      }
+    },
+    getInsuranceData: {
+      title: 'Get Insurance Data',
+      method: 'GET',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/insurance_data/{employee_id}',
+      badge: 'Stable',
+      breadcrumb: 'Insurance',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP001",
+  "plan_name": "Premium Health Plan",
+  "insurance_plan_id": "INS-PLAN-001",
+  "enrollment_date": "2022-01-15",
+  "coverage_type": "family",
+  "employee_contribution": 250.00,
+  "enrollment_time": "10:30:45",
+  "premium_per_month": 950.00
+}`
+      }
+    },
+    getInsurancePlan: {
+      title: 'Get Insurance Plan',
+      method: 'GET',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/insurance_plan/{plan_name}',
+      badge: 'Stable',
+      breadcrumb: 'Insurance',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      response: {
+        example: `{
+  "plan_name": "Premium Health Plan",
+  "plan_id": "INS-PLAN-001",
+  "network": "Nationwide",
+  "deductible_individual_family": "$500/$1000",
+  "out_of_pocket_maximum_individual_family": "$3000/$6000",
+  "coinsurance": "80/20",
+  "overall_lifetime_maximum": "Unlimited",
+  "rates_premium_employee_only": 500.00,
+  "rates_premium_employer_contribution_employee_only": 400.00,
+  "rates_premium_employee_contribution_employee_only": 100.00,
+  "rates_premium_employee_spouse": 800.00,
+  "rates_premium_employer_contribution_employee_spouse": 600.00,
+  "rates_premium_employee_contribution_employee_spouse": 200.00,
+  "rates_premium_employee_children": 750.00,
+  "rates_premium_employer_contribution_employee_children": 550.00,
+  "rates_premium_employee_contribution_employee_children": 200.00,
+  "rates_premium_family": 1200.00,
+  "rates_premium_employer_contribution_family": 950.00,
+  "rates_premium_employee_contribution_family": 250.00
+}`
+      }
+    },
+    createInsurancePlan: {
+      title: 'Create Insurance Plan',
+      method: 'POST',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/insurance_plan',
+      badge: 'Stable',
+      breadcrumb: 'Insurance',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'plan_name', type: 'string', required: true, example: 'Example: Essential Health Plan' },
+        { name: 'plan_id', type: 'string', required: true, example: 'Example: INS-PLAN-004' },
+        { name: 'network', type: 'string', required: false, example: 'Example: Regional' },
+        { name: 'deductible_individual_family', type: 'string', required: false, example: 'Example: $1000/$2000' },
+        { name: 'out_of_pocket_maximum_individual_family', type: 'string', required: false, example: 'Example: $5000/$10000' },
+        { name: 'coinsurance', type: 'string', required: false, example: 'Example: 70/30' },
+        { name: 'overall_lifetime_maximum', type: 'string', required: false, example: 'Example: Unlimited' },
+        { name: 'rates_premium_employee_only', type: 'number', required: true, example: 'Example: 350.00' },
+        { name: 'rates_premium_employer_contribution_employee_only', type: 'number', required: true, example: 'Example: 250.00' },
+        { name: 'rates_premium_employee_contribution_employee_only', type: 'number', required: true, example: 'Example: 100.00' },
+        { name: 'rates_premium_employee_spouse', type: 'number', required: false, example: 'Example: 600.00' },
+        { name: 'rates_premium_employer_contribution_employee_spouse', type: 'number', required: false, example: 'Example: 450.00' },
+        { name: 'rates_premium_employee_contribution_employee_spouse', type: 'number', required: false, example: 'Example: 150.00' }
+      ],
+      response: {
+        example: `{
+  "plan_name": "Essential Health Plan",
+  "plan_id": "INS-PLAN-004",
+  "network": "Regional",
+  "deductible_individual_family": "$1000/$2000",
+  "out_of_pocket_maximum_individual_family": "$5000/$10000",
+  "coinsurance": "70/30",
+  "overall_lifetime_maximum": "Unlimited",
+  "rates_premium_employee_only": 350.00,
+  "rates_premium_employer_contribution_employee_only": 250.00,
+  "rates_premium_employee_contribution_employee_only": 100.00,
+  "rates_premium_employee_spouse": 600.00,
+  "rates_premium_employer_contribution_employee_spouse": 450.00,
+  "rates_premium_employee_contribution_employee_spouse": 150.00,
+  "created_at": "2023-05-15T15:45:30Z"
+}`
+      }
+    },
+    getLeaveBalanceData: {
+      title: 'Get Leave Balance Data',
+      method: 'GET',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_balance_data/{employee_id}',
+      badge: 'Stable',
+      breadcrumb: 'Leave',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP001",
+  "annual_leave_balance": 15,
+  "sick_leave_balance": 10,
+  "personal_leave_balance": 3,
+  "unpaid_leave_taken": 0,
+  "leave_balance_updated_date": "2023-05-01"
+}`
+      }
+    },
+    updateLeaveBalanceData: {
+      title: 'Update Leave Balance Data',
+      method: 'PUT',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_balance_data/{employee_id}',
+      badge: 'Stable',
+      breadcrumb: 'Leave',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'annual_leave_balance', type: 'integer', required: false, example: 'Example: 12' },
+        { name: 'sick_leave_balance', type: 'integer', required: false, example: 'Example: 8' },
+        { name: 'personal_leave_balance', type: 'integer', required: false, example: 'Example: 2' },
+        { name: 'unpaid_leave_taken', type: 'integer', required: false, example: 'Example: 1' },
+        { name: 'leave_balance_updated_date', type: 'string', required: false, example: 'Example: 2023-05-15' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP001",
+  "annual_leave_balance": 12,
+  "sick_leave_balance": 8,
+  "personal_leave_balance": 2,
+  "unpaid_leave_taken": 1,
+  "leave_balance_updated_date": "2023-05-15",
+  "updated_at": "2023-05-15T10:20:30Z"
+}`
+      }
+    },
+    createLeaveBalanceData: {
+      title: 'Create Leave Balance Data',
+      method: 'POST',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_balance_data',
+      badge: 'Stable',
+      breadcrumb: 'Leave',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP003' },
+        { name: 'annual_leave_balance', type: 'integer', required: true, example: 'Example: 20' },
+        { name: 'sick_leave_balance', type: 'integer', required: true, example: 'Example: 12' },
+        { name: 'personal_leave_balance', type: 'integer', required: true, example: 'Example: 5' },
+        { name: 'unpaid_leave_taken', type: 'integer', required: false, example: 'Example: 0' },
+        { name: 'leave_balance_updated_date', type: 'string', required: true, example: 'Example: 2023-05-01' }
+      ],
+      response: {
+        example: `{
+  "employee_id": "EMP003",
+  "annual_leave_balance": 20,
+  "sick_leave_balance": 12,
+  "personal_leave_balance": 5,
+  "unpaid_leave_taken": 0,
+  "leave_balance_updated_date": "2023-05-01",
+  "created_at": "2023-05-01T09:00:00Z"
+}`
+      }
+    },
+    getLeaveRequest: {
+      title: 'Get Leave Request',
+      method: 'GET',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_requests/{application_id}',
+      badge: 'Stable',
+      breadcrumb: 'Leave',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      response: {
+        example: `{
+  "application_id": 12345,
+  "employee_id": "EMP001",
+  "start_date": "2023-06-10",
+  "total_working_days_off": 5,
+  "total_days_off": 7,
+  "end_date": "2023-06-16",
+  "deduction_from_salary": 0,
+  "leave_type": "annual",
+  "reason": "Family vacation",
+  "request_date": "2023-05-15",
+  "request_time": "14:30:00",
+  "reviewed_by": "EMP010",
+  "status": "approved",
+  "approved_by": "EMP010"
+}`
+      }
+    },
+    getAllLeaveRequests: {
+      title: 'Get All Leave Requests',
+      method: 'GET',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_requests',
+      badge: 'Stable',
+      breadcrumb: 'Leave',
+      queryParams: [
+        { name: 'employee_id', type: 'string', required: false, example: 'Example: EMP001' },
+        { name: 'status', type: 'string', required: false, example: 'Example: approved' },
+        { name: 'leave_type', type: 'string', required: false, example: 'Example: annual' },
+        { name: 'start_date_from', type: 'string', required: false, example: 'Example: 2023-01-01' },
+        { name: 'start_date_to', type: 'string', required: false, example: 'Example: 2023-12-31' }
+      ],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      response: {
+        example: `{
+  "total": 25,
+  "requests": [
+    {
+      "application_id": 12345,
+      "employee_id": "EMP001",
+      "start_date": "2023-06-10",
+      "total_working_days_off": 5,
+      "end_date": "2023-06-16",
+      "leave_type": "annual",
+      "status": "approved"
+    },
+    {
+      "application_id": 12346,
+      "employee_id": "EMP002",
+      "start_date": "2023-07-05",
+      "total_working_days_off": 2,
+      "end_date": "2023-07-06",
+      "leave_type": "sick",
+      "status": "approved"
+    }
+  ]
+}`
+      }
+    },
+    createLeaveRequest: {
+      title: 'Create Leave Request',
+      method: 'POST',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_requests',
+      badge: 'Stable',
+      breadcrumb: 'Leave',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP001' },
+        { name: 'start_date', type: 'string', required: true, example: 'Example: 2023-07-15' },
+        { name: 'end_date', type: 'string', required: true, example: 'Example: 2023-07-19' },
+        { name: 'leave_type', type: 'string', required: true, example: 'Example: annual' },
+        { name: 'reason', type: 'string', required: true, example: 'Example: Family event' },
+        { name: 'total_working_days_off', type: 'integer', required: false, example: 'Example: 5' },
+        { name: 'total_days_off', type: 'integer', required: false, example: 'Example: 5' },
+        { name: 'deduction_from_salary', type: 'integer', required: false, example: 'Example: 0' }
+      ],
+      response: {
+        example: `{
+  "application_id": 12347,
+  "employee_id": "EMP001",
+  "start_date": "2023-07-15",
+  "total_working_days_off": 5,
+  "total_days_off": 5,
+  "end_date": "2023-07-19",
+  "deduction_from_salary": 0,
+  "leave_type": "annual",
+  "reason": "Family event",
+  "request_date": "2023-06-01",
+  "request_time": "10:15:30",
+  "status": "pending",
+  "created_at": "2023-06-01T10:15:30Z"
+}`
+      }
+    },
+    updateLeaveRequest: {
+      title: 'Update Leave Request',
+      method: 'PUT',
+      url: 'https://hrms-api.xpectrum-ai.com/hrms/api/v1/leave_requests/{application_id}',
+      badge: 'Stable',
+      breadcrumb: 'Leave',
+      queryParams: [],
+      headerParams: [
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
+        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      ],
+      bodyParams: [
+        { name: 'status', type: 'string', required: false, example: 'Example: approved' },
+        { name: 'reviewed_by', type: 'string', required: false, example: 'Example: EMP010' },
+        { name: 'approved_by', type: 'string', required: false, example: 'Example: EMP010' },
+        { name: 'start_date', type: 'string', required: false, example: 'Example: 2023-07-16' },
+        { name: 'end_date', type: 'string', required: false, example: 'Example: 2023-07-20' },
+        { name: 'reason', type: 'string', required: false, example: 'Example: Family emergency' }
+      ],
+      response: {
+        example: `{
+  "application_id": 12347,
+  "employee_id": "EMP001",
+  "start_date": "2023-07-16",
+  "total_working_days_off": 5,
+  "total_days_off": 5,
+  "end_date": "2023-07-20",
+  "deduction_from_salary": 0,
+  "leave_type": "annual",
+  "reason": "Family emergency",
+  "request_date": "2023-06-01",
+  "request_time": "10:15:30",
+  "reviewed_by": "EMP010",
+  "status": "approved",
+  "approved_by": "EMP010",
+  "updated_at": "2023-06-02T14:20:15Z"
 }`
       }
     }
@@ -443,118 +1052,487 @@ const ApiDoc: React.FC = () => {
 
   const currentEndpoint = endpointData[activeEndpoint] || endpointData.getAllEmployees;
 
-  // Function to handle API calls
-  const handleApiCall = async () => {
-    if (!apiKey) {
-      setApiError('API key is required');
+  // Load real employee data from the actual API
+  const loadRealEmployeeData = () => {
+    // Set loading state immediately for better user feedback
+    setIsLoading(true);
+    
+    // Batch state resets for better performance
+    setApiError('');
+    setResponseDetails(null);
+    setApiResponse(null);
+    setIsResponseFromApi(true);
+    
+    // Get API key from current environment
+    const env = environments.find(e => e.name === activeEnvironment);
+    const currentApiKey = apiKey || (env?.variables.apiKey || '');
+    
+    // Validate API key for private endpoints
+    if (!currentApiKey && currentEndpoint.headerParams.some(p => p.name === 'X-API-KEY' && p.required)) {
+      setApiError('API key is required for this endpoint');
+      setIsLoading(false);
+      setShowTryItModal(true);
       return;
     }
     
+    // Validate base URL
+    if (!apiBaseUrl) {
+      setApiError('API base URL is required');
+      setIsLoading(false);
+      setShowTryItModal(true);
+      return;
+    }
+    
+    const startTime = performance.now();
+    
+    let apiUrl = `${apiBaseUrl}`;
+    
+    // For getAllEmployees, use the specific endpoint 
+    if (activeEndpoint === 'getAllEmployees') {
+      apiUrl = `${apiBaseUrl}/all_employee_data?api_key=xpectrum_api_key_123@ai`;
+    } 
+    // For other endpoints, use the class name pattern
+    else {
+      // Handle insurance_plan with plan_name parameter
+      if (activeEndpoint.includes('InsurancePlan')) {
+        apiUrl += '/insurance_plan';
+        
+        // Handle path parameters
+        if (currentEndpoint.url.includes('{plan_name}')) {
+          // Use plan name for this specific endpoint type
+          const planName = requestParams.plan_name || 'Premium Health Plan';
+          apiUrl += `/${encodeURIComponent(planName)}`;
+        }
+      }
+      // Handle other endpoints that use their respective class names
+      else {
+        // Map the endpoint to the correct API path based on the class name
+        if (activeEndpoint.includes('Employee') && !activeEndpoint.includes('Insurance')) {
+          apiUrl += '/employee_data';
+        } else if (activeEndpoint.includes('Salary')) {
+          apiUrl += '/salary_info';
+        } else if (activeEndpoint.includes('Payroll')) {
+          apiUrl += '/payroll';
+        } else if (activeEndpoint.includes('Insurance') || activeEndpoint.includes('insurance')) {
+          apiUrl += '/employee_insurance_data';
+        } else if (activeEndpoint.includes('LeaveBalance')) {
+          apiUrl += '/leave_balance_data';
+        } else if (activeEndpoint.includes('LeaveRequest')) {
+          apiUrl += '/leave_requests';
+        }
+        
+        // Handle path parameters like {employee_id} or {application_id}
+        if (currentEndpoint.url.includes('{employee_id}')) {
+          apiUrl += `/${realEmployeeId}`;
+          
+          // Update request params
+          setRequestParams({
+            ...requestParams,
+            employee_id: realEmployeeId
+          });
+        } else if (currentEndpoint.url.includes('{application_id}')) {
+          const applicationId = requestParams.application_id || '12345';
+          apiUrl += `/${applicationId}`;
+        }
+      }
+    }
+    
+    // Add query parameters if any exist for this endpoint
+    if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+      const queryParams = new URLSearchParams();
+      
+      currentEndpoint.queryParams.forEach(param => {
+        if (requestParams[param.name]) {
+          queryParams.append(param.name, requestParams[param.name]);
+        }
+      });
+      
+      const queryString = queryParams.toString();
+      if (queryString) {
+        apiUrl += `?${queryString}`;
+      }
+    }
+    
+    // Prepare request options based on HTTP method
+    const options: RequestInit = {
+      method: currentEndpoint.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-KEY': currentApiKey
+      }
+    };
+    
+    // Add body for POST, PUT, PATCH methods
+    if (['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && currentEndpoint.bodyParams) {
+      const bodyData: {[key: string]: any} = {};
+      
+      currentEndpoint.bodyParams.forEach(param => {
+        if (requestParams[param.name]) {
+          // Convert numbers to number type
+          if (param.type === 'number' || param.type === 'integer') {
+            bodyData[param.name] = Number(requestParams[param.name]);
+          } else {
+            bodyData[param.name] = requestParams[param.name];
+          }
+        }
+      });
+      
+      options.body = JSON.stringify(bodyData);
+    }
+    
+    // Open the testing modal immediately for better UX
+    setShowTryItModal(true);
+    
+    console.log(`Making ${currentEndpoint.method} request to: ${apiUrl}`);
+    
+    // Make the API call to the real endpoint
+    fetch(apiUrl, options)
+      .then(response => {
+        // Check for network errors or non-JSON responses
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Response is not JSON');
+        }
+        
+        return {
+          response,
+          status: response.status,
+          statusText: response.statusText,
+          time: Math.round(performance.now() - startTime)
+        };
+      })
+      .then(({response, status, statusText, time}) => {
+        return response.json().then(data => ({
+          data,
+          status,
+          statusText,
+          time
+        }));
+      })
+      .then(({data, status, statusText, time}) => {
+        // Calculate response size
+        const responseSize = JSON.stringify(data).length;
+        const formattedSize = responseSize < 1024 
+          ? `${responseSize} B` 
+          : `${(responseSize / 1024).toFixed(2)} KB`;
+        
+        // Set response details
+        setResponseDetails({
+          status,
+          statusText,
+          time,
+          size: formattedSize,
+          headers: {}
+        });
+        
+        // Set the response
+        setApiResponse(data);
+        setIsLoading(false);
+      })
+      .catch(error => {
+        console.error('API call error:', error);
+        const endTime = performance.now();
+        
+        setResponseDetails({
+          status: 0,
+          statusText: 'Failed',
+          time: Math.round(endTime - startTime),
+          size: '0 B'
+        });
+        
+        setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
+        setIsLoading(false);
+      });
+  };
+
+  // Function to handle API calls - updated to handle real endpoint
+  const handleApiCall = () => {
+    // Set loading state immediately for better user feedback
     setIsLoading(true);
+    
+    // Batch state resets for better performance
     setApiError('');
     setResponseDetails(null);
     setApiResponse(null);
     
-    const startTime = Date.now();
-
-    try {
-      // Prepare the API URL with path parameters
-      let apiUrl = currentEndpoint.url;
-      if (apiUrl.includes('{employee_id}') && requestParams.employee_id) {
-        apiUrl = apiUrl.replace('{employee_id}', requestParams.employee_id);
-      }
-
-      // Add query parameters
-      if (currentEndpoint.queryParams.length > 0) {
+    // Get API key from current environment
+    const env = environments.find(e => e.name === activeEnvironment);
+    const currentApiKey = apiKey || (env?.variables.apiKey || '');
+    
+    // Validate API key for private endpoints
+    if (!currentApiKey && currentEndpoint.headerParams.some(p => p.name === 'X-API-KEY' && p.required)) {
+      setApiError('API key is required for this endpoint');
+      setIsLoading(false);
+      return;
+    }
+    
+    if (apiBaseUrl) {
+      setIsResponseFromApi(true);
+      const startTime = performance.now();
+      
+      // Get the current endpoint data
+      const currentEndpointData = endpointData[activeEndpoint];
+      
+      // Use the custom URL if it was edited, otherwise construct it
+      let apiUrl = editableUrl || `${apiBaseUrl}`;
+      
+      // Only construct the URL if no custom URL is provided
+      if (!editableUrl) {
+        // Map the endpoint to the correct API path
+        if (activeEndpoint === 'getAllEmployees') {
+          apiUrl = `${apiBaseUrl}/all_employee_data`;
+        } else if (activeEndpoint.includes('Employee') && !activeEndpoint.includes('Insurance')) {
+          apiUrl += '/employee_data';
+        } else if (activeEndpoint.includes('Salary')) {
+          apiUrl += '/salary_info';
+        } else if (activeEndpoint.includes('Payroll')) {
+          apiUrl += '/payroll';
+        } else if (activeEndpoint.includes('InsurancePlan')) {
+          apiUrl += '/insurance_plan';
+        } else if (activeEndpoint.includes('Insurance') || activeEndpoint.includes('insurance')) {
+          apiUrl += '/employee_insurance_data';
+        } else if (activeEndpoint.includes('LeaveBalance')) {
+          apiUrl += '/leave_balance_data';
+        } else if (activeEndpoint.includes('LeaveRequest')) {
+          apiUrl += '/leave_requests';
+        }
+        
+        // Handle path parameters like {employee_id} or {application_id}
+        if (currentEndpointData.url.includes('{employee_id}')) {
+          apiUrl += `/${requestParams.employee_id || ''}`;
+        } else if (currentEndpointData.url.includes('{plan_name}')) {
+          const planName = requestParams.plan_name || 'Premium Health Plan';
+          apiUrl += `/${encodeURIComponent(planName)}`;
+        } else if (currentEndpointData.url.includes('{application_id}')) {
+          apiUrl += `/${requestParams.application_id || ''}`;
+        }
+        
+        // Add query parameters if any exist for this endpoint
         const queryParams = new URLSearchParams();
         
-        currentEndpoint.queryParams.forEach(param => {
+        // Always add API key
+        queryParams.append('api_key', 'xpectrum_api_key_123@ai');
+        
+        if (currentEndpointData.queryParams && currentEndpointData.queryParams.length > 0) {
+          currentEndpointData.queryParams.forEach(param => {
+            if (requestParams[param.name] && param.name !== 'api_key') {
+              queryParams.append(param.name, requestParams[param.name]);
+            }
+          });
+        }
+        
+        const queryString = queryParams.toString();
+        apiUrl += `?${queryString}`;
+      }
+      
+      // Prepare request options based on HTTP method
+      const options: RequestInit = {
+        method: currentEndpointData.method,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-KEY': currentApiKey
+        }
+      };
+      
+      // Add body for POST, PUT, PATCH methods
+      if (['POST', 'PUT', 'PATCH'].includes(currentEndpointData.method) && currentEndpointData.bodyParams) {
+        const bodyData: {[key: string]: any} = {};
+        
+        currentEndpointData.bodyParams.forEach(param => {
           if (requestParams[param.name]) {
-            queryParams.append(param.name, requestParams[param.name]);
+            // Convert numbers to number type
+            if (param.type === 'number') {
+              bodyData[param.name] = Number(requestParams[param.name]);
+            } else {
+              bodyData[param.name] = requestParams[param.name];
+            }
           }
         });
         
-        const queryString = queryParams.toString();
-        if (queryString) {
-          apiUrl += `?${queryString}`;
-        }
+        options.body = JSON.stringify(bodyData);
       }
-
-      // Create headers for the request
-      const headers: {[key: string]: string} = {
-        ...requestHeaders,
-        'X-API-KEY': apiKey,
-      };
-
-      // Prepare request options
-      const options: RequestInit = {
-        method: currentEndpoint.method,
-        headers
-      };
-
-      // Add body for POST, PUT methods
-      if (['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method)) {
-        if (bodyType === 'raw' && rawBody) {
-          options.body = rawBody;
-        } else {
-          const bodyData: {[key: string]: any} = {};
-          
-          if (currentEndpoint.bodyParams) {
-            currentEndpoint.bodyParams.forEach(param => {
-              if (requestParams[param.name]) {
-                // Convert numbers to number type
-                if (param.type === 'number' || param.type === 'integer') {
-                  bodyData[param.name] = Number(requestParams[param.name]);
-                } else {
-                  bodyData[param.name] = requestParams[param.name];
-                }
-              }
-            });
-          }
-          
-          options.body = JSON.stringify(bodyData);
-        }
-      }
-
-      // Display request details in console for debugging
-      console.log('Request URL:', apiUrl);
-      console.log('Request Options:', options);
-
+      
+      console.log(`Making ${currentEndpointData.method} request to: ${apiUrl}`);
+      
       // Make the API call
-      const response = await fetch(apiUrl, options);
-      const responseData = await response.json();
-      const endTime = Date.now();
+      fetch(apiUrl, options)
+        .then(response => {
+          return {
+            response,
+            status: response.status,
+            statusText: response.statusText,
+            time: Math.round(performance.now() - startTime)
+          };
+        })
+        .then(({response, status, statusText, time}) => {
+          return response.json().then(data => ({
+            data,
+            status,
+            statusText,
+            time
+          }));
+        })
+        .then(({data, status, statusText, time}) => {
+          // Calculate response size
+          const responseSize = JSON.stringify(data).length;
+          const formattedSize = responseSize < 1024 
+            ? `${responseSize} B` 
+            : `${(responseSize / 1024).toFixed(2)} KB`;
+          
+          // Set response details
+          setResponseDetails({
+            status,
+            statusText,
+            time,
+            size: formattedSize,
+            headers: {}
+          });
+          
+          // Set the response
+          setApiResponse(data);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error('API call error:', error);
+          const endTime = performance.now();
+          
+          setResponseDetails({
+            status: 0,
+            statusText: 'Failed',
+            time: Math.round(endTime - startTime),
+            size: '0 B',
+            headers: {}
+          });
+          
+          setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
+          setIsLoading(false);
+        });
+    } else {
+      // Original mock API call logic
+      setIsResponseFromApi(false);
       
-      // Calculate response size
-      const responseSize = JSON.stringify(responseData).length;
-      const formattedSize = responseSize < 1024 
-        ? `${responseSize} B` 
-        : `${(responseSize / 1024).toFixed(2)} KB`;
+      if (!apiKey && currentEndpoint.headerParams.some(p => p.name === 'X-API-KEY' && p.required)) {
+        setApiError('API key is required');
+        setIsLoading(false);
+        return;
+      }
+      
+      const startTime = performance.now();
 
-      // Set response details
-      setResponseDetails({
-        status: response.status,
-        statusText: response.statusText,
-        time: endTime - startTime,
-        size: formattedSize
-      });
+      try {
+        // Simulate API call with mock data
+        // ... existing mock API call code ...
 
-      // Set the response
-      setApiResponse(responseData);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('API call error:', error);
-      const endTime = Date.now();
-      
-      setResponseDetails({
-        status: 0,
-        statusText: 'Failed',
-        time: endTime - startTime,
-        size: '0 B'
-      });
-      
-      setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
-      setIsLoading(false);
+        // Prepare the API URL with path parameters
+        let apiUrl = currentEndpoint.url;
+        if (apiUrl.includes('{employee_id}') && requestParams.employee_id) {
+          apiUrl = apiUrl.replace('{employee_id}', requestParams.employee_id);
+        }
+
+        // Add query parameters
+        if (currentEndpoint.queryParams.length > 0) {
+          const queryParams = new URLSearchParams();
+          
+          // Always add API key
+          queryParams.append('api_key', 'xpectrum_api_key_123@ai');
+          
+          currentEndpoint.queryParams.forEach(param => {
+            if (requestParams[param.name] && param.name !== 'api_key') {
+              queryParams.append(param.name, requestParams[param.name]);
+            }
+          });
+          
+          const queryString = queryParams.toString();
+          apiUrl += `?${queryString}`;
+        } else {
+          // If no query params defined, still add the API key
+          apiUrl += '?api_key=xpectrum_api_key_123@ai';
+        }
+
+        // Create headers for the request
+        const headers: {[key: string]: string} = {
+          ...requestHeaders,
+          'X-API-KEY': apiKey,
+        };
+
+        // Prepare request options
+        const options: RequestInit = {
+          method: currentEndpoint.method,
+          headers
+        };
+
+        // Add body for POST, PUT methods
+        if (['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method)) {
+          if (bodyType === 'raw' && rawBody) {
+            options.body = rawBody;
+          } else {
+            const bodyData: {[key: string]: any} = {};
+            
+            if (currentEndpoint.bodyParams) {
+              currentEndpoint.bodyParams.forEach(param => {
+                if (requestParams[param.name]) {
+                  // Convert numbers to number type
+                  if (param.type === 'number' || param.type === 'integer') {
+                    bodyData[param.name] = Number(requestParams[param.name]);
+                  } else {
+                    bodyData[param.name] = requestParams[param.name];
+                  }
+                }
+              });
+            }
+            
+            options.body = JSON.stringify(bodyData);
+          }
+        }
+
+        // Display request details in console for debugging
+        console.log('Request URL:', apiUrl);
+        console.log('Request Options:', options);
+
+        // For mock calls, reduce the timeout for faster responses
+        setTimeout(() => {
+          const mockResponse = JSON.parse(JSON.stringify(
+            currentEndpoint.response.example
+          ));
+          
+          const endTime = performance.now();
+          
+          // Calculate response size
+          const responseSize = JSON.stringify(mockResponse).length;
+          const formattedSize = responseSize < 1024 
+            ? `${responseSize} B` 
+            : `${(responseSize / 1024).toFixed(2)} KB`;
+
+          // Set response details
+          setResponseDetails({
+            status: 200,
+            statusText: 'OK',
+            time: endTime - startTime,
+            size: formattedSize
+          });
+
+          // Set the response
+          setApiResponse(mockResponse);
+          setIsLoading(false);
+        }, 300); // Reduced from 1000ms to 300ms for faster feedback
+      } catch (error) {
+        console.error('API call error:', error);
+        const endTime = performance.now();
+        
+        setResponseDetails({
+          status: 0,
+          statusText: 'Failed',
+          time: endTime - startTime,
+          size: '0 B'
+        });
+        
+        setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
+        setIsLoading(false);
+      }
     }
   };
 
@@ -640,10 +1618,9 @@ const ApiDoc: React.FC = () => {
     const env = environments.find(e => e.name === activeEnvironment);
     if (env && env.variables.apiKey) {
       setApiKey(env.variables.apiKey);
-    } else {
-      setApiKey('');
     }
     
+    // Show modal immediately
     setShowTryItModal(true);
   };
 
@@ -703,26 +1680,23 @@ const ApiDoc: React.FC = () => {
   };
 
   const handleEndpointClick = (endpoint: string, event: React.MouseEvent) => {
-    // Stop event bubbling to prevent triggering parent section toggle
-    event.stopPropagation();
-    
-    if (animating) return;
-    
-    setAnimating(true);
-    
-    // Add slide animation to selected endpoint
-    const endpointElement = document.querySelector(`.section-link[data-endpoint="${endpoint}"]`);
-    if (endpointElement) {
-      endpointElement.classList.add('slide-animation');
-      setTimeout(() => {
-        endpointElement.classList.remove('slide-animation');
-        setAnimating(false);
-        setActiveEndpoint(endpoint);
-      }, 300);
-    } else {
-      setActiveEndpoint(endpoint);
-      setAnimating(false);
+    // Don't trigger if clicking on the "Try It" button
+    if ((event.target as HTMLElement).classList.contains('try-button')) {
+      return;
     }
+    
+    setActiveEndpoint(endpoint);
+    setApiResponse(null);
+    setResponseDetails(null);
+    setApiError('');
+    setRequestParams({});
+    setEditableUrl(''); // Reset editable URL when changing endpoints
+    
+    // Add animation flag
+    setAnimating(true);
+    setTimeout(() => {
+      setAnimating(false);
+    }, 500);
   };
 
   const getMethodClassName = (method: string) => {
@@ -1027,7 +2001,7 @@ print(data)`;
     
     // If search is not empty, open all categories to show search results
     if (searchText) {
-      setOpenCategories(['employee', 'salary', 'payroll']);
+      setOpenCategories(['employee', 'salary', 'payroll', 'insurance', 'leave']);
     }
   };
 
@@ -1037,6 +2011,21 @@ print(data)`;
     
     const regex = new RegExp(`(${searchTerm})`, 'gi');
     return text.replace(regex, '<span class="highlight-match">$1</span>');
+  };
+
+  // Add a global API config modal
+  const [showApiConfigModal, setShowApiConfigModal] = useState(false);
+  
+  // Add a function to toggle the API config modal
+  const toggleApiConfigModal = () => {
+    setShowApiConfigModal(!showApiConfigModal);
+  };
+  
+  // Add a function to save the API base URL
+  const saveApiBaseUrl = (url: string) => {
+    setApiBaseUrl(url);
+    setIsEditingApiConfig(false);
+    setShowApiConfigModal(false);
   };
 
   return (
@@ -1057,8 +2046,10 @@ print(data)`;
             <img src="/logo.svg" alt="ai logo" width="20" height="20" />
           </div>
           <h3 className="logo-text">employee-api</h3>
-          <div className="theme-toggle" onClick={toggleTheme}>
-            <img src={darkMode ? "/moon.svg" : "/sun.svg"} alt={darkMode ? "light mode" : "dark mode"} width="16" height="16" />
+          <div className="api-controls">
+            <div className="theme-toggle" onClick={toggleTheme}>
+              <img src={darkMode ? "/moon.svg" : "/sun.svg"} alt={darkMode ? "light mode" : "dark mode"} width="16" height="16" />
+            </div>
           </div>
         </div>
         
@@ -1166,6 +2157,64 @@ print(data)`;
             )}
           </ul>
         </div>
+        
+        <div className="sidebar-section">
+          <div 
+            className={`section-header ${openCategories.includes('insurance') ? 'active' : ''}`}
+            onClick={() => handleCategoryClick('insurance')}
+            data-category="insurance"
+          >
+            <span>Insurance Management</span>
+            <span className="chevron">▼</span>
+          </div>
+          <ul className={`section-links ${openCategories.includes('insurance') ? 'visible' : 'hidden'}`}>
+            {getFilteredEndpoints('insurance').map(endpointKey => (
+              <li 
+                key={endpointKey}
+                className={`section-link ${activeEndpoint === endpointKey ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpointKey, event)}
+                data-endpoint={endpointKey}
+              >
+                <span dangerouslySetInnerHTML={{ __html: highlightMatch(endpointData[endpointKey].title) }}></span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpointKey].method)}`}>
+                  {endpointData[endpointKey].method}
+                </span>
+              </li>
+            ))}
+            {getFilteredEndpoints('insurance').length === 0 && searchTerm && (
+              <li className="no-results">No matching endpoints found</li>
+            )}
+          </ul>
+        </div>
+        
+        <div className="sidebar-section">
+          <div 
+            className={`section-header ${openCategories.includes('leave') ? 'active' : ''}`}
+            onClick={() => handleCategoryClick('leave')}
+            data-category="leave"
+          >
+            <span>Leave Management</span>
+            <span className="chevron">▼</span>
+          </div>
+          <ul className={`section-links ${openCategories.includes('leave') ? 'visible' : 'hidden'}`}>
+            {getFilteredEndpoints('leave').map(endpointKey => (
+              <li 
+                key={endpointKey}
+                className={`section-link ${activeEndpoint === endpointKey ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpointKey, event)}
+                data-endpoint={endpointKey}
+              >
+                <span dangerouslySetInnerHTML={{ __html: highlightMatch(endpointData[endpointKey].title) }}></span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpointKey].method)}`}>
+                  {endpointData[endpointKey].method}
+                </span>
+              </li>
+            ))}
+            {getFilteredEndpoints('leave').length === 0 && searchTerm && (
+              <li className="no-results">No matching endpoints found</li>
+            )}
+          </ul>
+        </div>
       </aside>
 
       {/* Overlay for mobile menu */}
@@ -1188,7 +2237,21 @@ print(data)`;
             {currentEndpoint.method}
           </div>
           <div className="endpoint-url">{currentEndpoint.url}</div>
-          <button className="try-it-button" onClick={openTryItModal}>Try it</button>
+          <div className="endpoint-actions">
+            <button 
+              className="try-api-button" 
+              onClick={() => {
+                // Start loading immediately
+                setIsLoading(true);
+                // Show modal immediately
+                setShowTryItModal(true);
+                // Handle API call with slight delay to allow UI to update
+                setTimeout(loadRealEmployeeData, 10);
+              }}
+            >
+              Use API
+            </button>
+          </div>
         </div>
 
         <div className="api-section">
@@ -1447,7 +2510,20 @@ print(data)`;
                   <span className={`endpoint-method ${getMethodClassName(currentEndpoint.method)}`}>
                     {currentEndpoint.method}
                   </span>
-                  <h2>{currentEndpoint.title}</h2>
+                  <div className="d-flex align-items-center">
+                    <h2>{activeEndpoint === 'getEmployeeById' && (apiBaseUrl || isResponseFromApi) ? 'Get Employee Data' : currentEndpoint.title}</h2>
+                    {isResponseFromApi && (
+                      <span className="ms-2 badge" style={{ 
+                        fontSize: '0.7rem', 
+                        padding: '0.35em 0.65em', 
+                        backgroundColor: 'rgba(0, 180, 60, 0.8)', 
+                        color: 'white',
+                        borderRadius: '4px'
+                      }}>
+                        API
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="try-it-controls">
                   <button 
@@ -1469,12 +2545,175 @@ print(data)`;
                 <span className={`method-badge ${getMethodClassName(currentEndpoint.method)}`}>
                   {currentEndpoint.method}
                 </span>
-                <div className="url-display">
-                  {currentEndpoint.url.includes('{employee_id}') 
-                    ? currentEndpoint.url.replace('{employee_id}', requestParams.employee_id || '{employee_id}')
-                    : currentEndpoint.url
-                  }
-                </div>
+                {isEditingUrl ? (
+                  <div className="url-input-container">
+                    <input
+                      type="text"
+                      className="url-input"
+                      value={editableUrl}
+                      onChange={(e) => setEditableUrl(e.target.value)}
+                      onBlur={() => setIsEditingUrl(false)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setIsEditingUrl(false);
+                        } else if (e.key === 'Escape') {
+                          setEditableUrl('');
+                          setIsEditingUrl(false);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <button 
+                      className="url-reset-button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Construct the default URL
+                        const defaultUrl = (() => {
+                          let apiUrl = `${apiBaseUrl}`;
+                          
+                          // Map the endpoint to the correct API path
+                          if (activeEndpoint.includes('Employee')) {
+                            apiUrl += '/employee_data';
+                          } else if (activeEndpoint.includes('Salary')) {
+                            apiUrl += '/salary_data';
+                          } else if (activeEndpoint.includes('Payroll')) {
+                            apiUrl += '/payroll_data';
+                          }
+                          
+                          // Handle path parameters like {employee_id}
+                          if (currentEndpoint.url.includes('{employee_id}')) {
+                            apiUrl += `/${requestParams.employee_id || realEmployeeId}`;
+                          }
+                          
+                          // Add query parameters if any exist for this endpoint
+                          if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+                            const queryParams = new URLSearchParams();
+                            
+                            currentEndpoint.queryParams.forEach(param => {
+                              if (requestParams[param.name]) {
+                                queryParams.append(param.name, requestParams[param.name]);
+                              }
+                            });
+                            
+                            const queryString = queryParams.toString();
+                            if (queryString) {
+                              apiUrl += `?${queryString}`;
+                            }
+                          }
+                          
+                          return apiUrl;
+                        })();
+                        
+                        setEditableUrl(defaultUrl);
+                      }}
+                      title="Reset to default URL"
+                    >
+                      ↺
+                    </button>
+                  </div>
+                ) : (
+                  <div 
+                    className="url-display"
+                    onClick={() => {
+                      // Initialize editable URL with current display URL value
+                      const currentUrl = isResponseFromApi ? 
+                        (() => {
+                          // Construct the display URL for the API
+                          let apiUrl = `${apiBaseUrl}`;
+                          
+                          // Map the endpoint to the correct API path
+                          if (activeEndpoint.includes('Employee')) {
+                            apiUrl += '/employee_data';
+                          } else if (activeEndpoint.includes('Salary')) {
+                            apiUrl += '/salary_data';
+                          } else if (activeEndpoint.includes('Payroll')) {
+                            apiUrl += '/payroll_data';
+                          }
+                          
+                          // Handle path parameters like {employee_id}
+                          if (currentEndpoint.url.includes('{employee_id}')) {
+                            apiUrl += `/${requestParams.employee_id || realEmployeeId}`;
+                          }
+                          
+                          // Add query parameters if any exist for this endpoint
+                          if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+                            const queryParams = new URLSearchParams();
+                            
+                            currentEndpoint.queryParams.forEach(param => {
+                              if (requestParams[param.name]) {
+                                queryParams.append(param.name, requestParams[param.name]);
+                              }
+                            });
+                            
+                            const queryString = queryParams.toString();
+                            if (queryString) {
+                              apiUrl += `?${queryString}`;
+                            }
+                          }
+                          
+                          return apiUrl;
+                        })()
+                        : (currentEndpoint.url.includes('{employee_id}')
+                          ? currentEndpoint.url.replace('{employee_id}', requestParams.employee_id || '{employee_id}')
+                          : currentEndpoint.url);
+                      
+                      setEditableUrl(currentUrl);
+                      setIsEditingUrl(true);
+                    }}
+                    title="Click to edit URL"
+                  >
+                    {isResponseFromApi ? 
+                      (() => {
+                        // Construct the display URL for the API
+                        let apiUrl = `${apiBaseUrl}`;
+                        
+                        // Map the endpoint to the correct API path
+                        if (activeEndpoint.includes('Employee')) {
+                          apiUrl += '/employee_data';
+                        } else if (activeEndpoint.includes('Salary')) {
+                          apiUrl += '/salary_data';
+                        } else if (activeEndpoint.includes('Payroll')) {
+                          apiUrl += '/payroll_data';
+                        }
+                        
+                        // Handle path parameters like {employee_id}
+                        if (currentEndpoint.url.includes('{employee_id}')) {
+                          apiUrl += `/${requestParams.employee_id || realEmployeeId}`;
+                          
+                          // Update request params
+                          if (!requestParams.employee_id && realEmployeeId) {
+                            setTimeout(() => {
+                              updateRequestParam('employee_id', realEmployeeId);
+                            }, 0);
+                          }
+                        }
+                        
+                        // Add query parameters if any exist for this endpoint
+                        if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+                          const queryParams = new URLSearchParams();
+                          
+                          currentEndpoint.queryParams.forEach(param => {
+                            if (requestParams[param.name]) {
+                              queryParams.append(param.name, requestParams[param.name]);
+                            }
+                          });
+                          
+                          const queryString = queryParams.toString();
+                          if (queryString) {
+                            apiUrl += `?${queryString}`;
+                          }
+                        }
+                        
+                        return apiUrl;
+                      })()
+                      : (currentEndpoint.url.includes('{employee_id}')
+                        ? currentEndpoint.url.replace('{employee_id}', requestParams.employee_id || '{employee_id}')
+                        : currentEndpoint.url)
+                    }
+                  </div>
+                )}
                 <button 
                   className={`send-request-button ${isLoading ? 'loading' : ''}`} 
                   onClick={handleApiCall}
@@ -1489,7 +2728,7 @@ print(data)`;
                 </button>
               </div>
               
-              <div className="try-it-tabs">
+              <div className="try-it-tabs" style={{ display: 'none' }}>
                 <button 
                   className={`try-it-tab ${activeRequestTab === 'params' ? 'active' : ''}`}
                   onClick={() => setActiveRequestTab('params')}
@@ -1519,8 +2758,145 @@ print(data)`;
               </div>
               
               <div className="try-it-modal-content">
+                <div className="api-base-url-container">
+                  <div className="api-base-url-label">API Base URL:</div>
+                  <div className="api-base-url-value">
+                    <input 
+                      type="text" 
+                      className="api-base-url-input" 
+                      value={apiBaseUrl} 
+                      onChange={(e) => setApiBaseUrl(e.target.value)}
+                      placeholder="Enter API base URL"
+                    />
+                  </div>
+                </div>
+
+                <div className="request-tabs" style={{ display: 'none' }}>
+                  <div
+                    className={`request-tab ${activeRequestTab === 'params' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('params')}
+                  >
+                    <span>Params</span>
+                  </div>
+                  <div
+                    className={`request-tab ${activeRequestTab === 'headers' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('headers')}
+                  >
+                    <span>Headers</span>
+                  </div>
+                  {['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && (
+                    <div
+                      className={`request-tab ${activeRequestTab === 'body' ? 'active' : ''}`}
+                      onClick={() => setActiveRequestTab('body')}
+                    >
+                      <span>Body</span>
+                    </div>
+                  )}
+                  <div
+                    className={`request-tab ${activeRequestTab === 'auth' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('auth')}
+                  >
+                    <span>Authorization</span>
+                  </div>
+                </div>
+
                 {activeRequestTab === 'params' && (
-                  <div className="try-it-section">
+                  <div className="request-tab-content">
+                    {/* Add API URL config at the top of params tab */}
+                    <div className="api-config-summary">
+                      <div className="api-config-row">
+                        <span className="api-config-label">API Base URL:</span>
+                        <span className="api-config-value">{apiBaseUrl || 'Not configured'}</span>
+                        <button 
+                          className="small-config-button"
+                          onClick={toggleApiConfigModal}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {activeEndpoint === 'getEmployeeById' && apiBaseUrl && (
+                      <div className="api-config-card">
+                        <div className="api-config-header">
+                          <h3>API Configuration</h3>
+                          <div className="api-badge">LIVE</div>
+                        </div>
+                        
+                        <div className="config-field-container">
+                          <label className="config-field-label">
+                            API Base URL
+                          </label>
+                          {isEditingApiConfig ? (
+                            <div className="config-input-group">
+                              <input
+                                type="text"
+                                className="config-input"
+                                value={apiBaseUrl}
+                                onChange={(e) => setApiBaseUrl(e.target.value)}
+                                placeholder="Enter API base URL (e.g., https://hrms-api.xpectrum-ai.com/hrms/api/v1)"
+                              />
+                              <button
+                                className="config-edit-btn save"
+                                onClick={() => setIsEditingApiConfig(false)}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="config-input-group">
+                              <input
+                                type="text"
+                                className="config-input"
+                                value={apiBaseUrl}
+                                disabled
+                              />
+                              <button
+                                className="config-edit-btn"
+                                onClick={() => setIsEditingApiConfig(true)}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          )}
+                          <p className="config-description">
+                            Base URL for the API endpoint (without trailing slash)
+                          </p>
+                        </div>
+                        
+                        <div className="config-field-container">
+                          <label className="config-field-label">Employee ID</label>
+                          <div className="config-input-group">
+                            <input
+                              type="text"
+                              className="config-input"
+                              value={realEmployeeId}
+                              onChange={(e) => setRealEmployeeId(e.target.value)}
+                              placeholder="Enter employee ID (e.g., EM37938)"
+                            />
+                          </div>
+                          <p className="config-description">
+                            The unique identifier for the employee record to retrieve
+                          </p>
+                        </div>
+
+                        <div className="config-action-container">
+                          <button 
+                            className="test-api-button"
+                            onClick={() => {
+                              // Start loading immediately
+                              setIsLoading(true);
+                              // Handle API call with slight delay to allow UI to update
+                              setTimeout(loadRealEmployeeData, 10);
+                            }}
+                          >
+                            <span className="test-icon">⟳</span>
+                            Test API
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
                     {currentEndpoint.url.includes('{employee_id}') && (
                       <div className="path-params-section">
                         <h3>Path Parameters</h3>
@@ -1529,11 +2905,20 @@ print(data)`;
                           <input
                             type="text"
                             id="employee-id"
-                            value={requestParams.employee_id || ''}
-                            onChange={(e) => updateRequestParam('employee_id', e.target.value)}
+                            value={activeEndpoint === 'getEmployeeById' && apiBaseUrl ? realEmployeeId : (requestParams.employee_id || '')}
+                            onChange={(e) => {
+                              if (activeEndpoint === 'getEmployeeById' && apiBaseUrl) {
+                                setRealEmployeeId(e.target.value);
+                              }
+                              updateRequestParam('employee_id', e.target.value);
+                            }}
                             placeholder="Enter employee ID (e.g. EMP001)"
                           />
-                          <div className="param-description">Required path parameter for identifying the employee</div>
+                          <div className="param-description">
+                            {activeEndpoint === 'getEmployeeById' && apiBaseUrl 
+                              ? "Employee ID from the API (e.g. EM37938)" 
+                              : "Required path parameter for identifying the employee"}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -1749,7 +3134,21 @@ print(data)`;
                     {apiResponse && !isLoading && (
                       <div className="response-body">
                         <div className="response-body-header">
-                          <span>Response Body</span>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span>Response Body</span>
+                            {isResponseFromApi && (
+                              <span style={{ 
+                                marginLeft: '8px',
+                                fontSize: '0.7rem', 
+                                padding: '0.35em 0.65em', 
+                                backgroundColor: 'rgba(0, 180, 60, 0.8)', 
+                                color: 'white',
+                                borderRadius: '4px'
+                              }}>
+                                API Data
+                              </span>
+                            )}
+                          </div>
                           <button 
                             className={`copy-response-btn ${copiedCode ? 'copied' : ''}`}
                             onClick={() => copyCodeToClipboard(JSON.stringify(apiResponse, null, 2))}
@@ -1798,8 +3197,331 @@ print(data)`;
         )}
       </main>
       
+      {/* API Configuration Modal */}
+      {showApiConfigModal && (
+        <div className="api-config-modal-overlay">
+          <div className="api-config-modal">
+            <div className="api-config-modal-header">
+              <h3>API Configuration</h3>
+              <button className="api-config-modal-close" onClick={toggleApiConfigModal}>×</button>
+            </div>
+            <div className="api-config-modal-content">
+              <div className="config-field-container">
+                <label className="config-field-label">API Base URL</label>
+                <div className="config-input-group">
+                  <input
+                    type="text"
+                    className="config-input"
+                    value={apiBaseUrl}
+                    onChange={(e) => setApiBaseUrl(e.target.value)}
+                    placeholder="Enter API base URL (e.g., https://hrms-api.xpectrum-ai.com/hrms/api/v1)"
+                  />
+                </div>
+                <p className="config-description">
+                  Base URL for the API endpoint (without trailing slash)
+                </p>
+              </div>
+              <div className="config-field-container">
+                <label className="config-field-label">Default Employee ID</label>
+                <div className="config-input-group">
+                  <input
+                    type="text"
+                    className="config-input"
+                    value={realEmployeeId}
+                    onChange={(e) => setRealEmployeeId(e.target.value)}
+                    placeholder="Enter employee ID (e.g., EM37938)"
+                  />
+                </div>
+                <p className="config-description">
+                  The default employee ID to use for endpoints requiring one
+                </p>
+              </div>
+            </div>
+            <div className="api-config-modal-footer">
+              <button 
+                className="save-config-button"
+                onClick={toggleApiConfigModal}
+              >
+                Save & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Custom cursor for enhanced UI effect */}
       <div className="custom-cursor"></div>
+      
+      {/* Add custom CSS for the new components */}
+      <style>
+        {`
+         .api-base-url-container {
+           background-color: var(--background-secondary);
+           border-radius: 4px;
+           padding: 12px 16px;
+           margin-bottom: 20px;
+           display: flex;
+           flex-direction: column;
+           gap: 8px;
+         }
+         
+         .api-base-url-label {
+           font-size: 0.9rem;
+           font-weight: 600;
+           color: var(--text-secondary);
+         }
+         
+         .api-base-url-value {
+           position: relative;
+         }
+         
+         .api-base-url-input {
+           width: 100%;
+           padding: 8px 12px;
+           background-color: var(--background-primary);
+           border: 1px solid var(--border-color);
+           border-radius: 4px;
+           color: var(--text-primary);
+           font-family: monospace;
+           font-size: 0.9rem;
+         }
+         
+         .api-base-url-input:focus {
+           outline: none;
+           border-color: var(--accent-color);
+           box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.25);
+         }
+         
+         .api-base-url-indicator {
+           background-color: var(--background-secondary);
+           border-radius: 4px;
+           padding: 8px 12px;
+           margin-bottom: 16px;
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+         }
+         
+         .url-input-container {
+           display: flex;
+           flex-grow: 1;
+           position: relative;
+         }
+         
+         .url-input {
+           flex-grow: 1;
+           padding: 0.5rem 0.75rem;
+           min-height: 40px;
+           font-family: monospace;
+           font-size: 0.9rem;
+           background-color: var(--background-primary, #1e1e1e);
+           color: var(--text-primary, #ffffff);
+           border: none;
+           outline: none;
+           width: 100%;
+         }
+         
+         .url-reset-button {
+           position: absolute;
+           right: 5px;
+           top: 50%;
+           transform: translateY(-50%);
+           background: none;
+           border: none;
+           color: var(--text-secondary, #888888);
+           cursor: pointer;
+           font-size: 16px;
+           padding: 0 5px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+         }
+         
+         .url-reset-button:hover {
+           color: var(--text-primary, #ffffff);
+         }
+         
+         .url-display {
+           cursor: text !important;
+         }
+         
+         .url-display:hover::after {
+           content: 'Click to edit URL';
+           position: absolute;
+           top: -30px;
+           left: 50%;
+           transform: translateX(-50%);
+           background: var(--background-tertiary, #333333);
+           color: var(--text-primary, #ffffff);
+           padding: 5px 10px;
+           border-radius: 4px;
+           font-size: 12px;
+           white-space: nowrap;
+           z-index: 10;
+           opacity: 0.9;
+         }
+         
+         .current-base-url {
+           display: flex;
+           align-items: center;
+           gap: 8px;
+           font-size: 0.9rem;
+         }
+         
+         .current-base-url code {
+           background: var(--background-tertiary);
+           padding: 2px 6px;
+           border-radius: 4px;
+           font-family: monospace;
+           max-width: 300px;
+           overflow: hidden;
+           text-overflow: ellipsis;
+           white-space: nowrap;
+         }
+         
+         .edit-url-button {
+           background: var(--accent-color);
+           color: white;
+           border: none;
+           border-radius: 4px;
+           padding: 2px 8px;
+           font-size: 0.8rem;
+           cursor: pointer;
+         }
+         
+         .api-config-modal-overlay {
+           position: fixed;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           background-color: rgba(0, 0, 0, 0.5);
+           display: flex;
+           justify-content: center;
+           align-items: center;
+           z-index: 1000;
+         }
+         
+         .api-config-modal {
+           background-color: var(--background-primary);
+           border-radius: 8px;
+           width: 90%;
+           max-width: 500px;
+           max-height: 90vh;
+           overflow-y: auto;
+           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+         }
+         
+         .api-config-modal-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           padding: 16px 20px;
+           border-bottom: 1px solid var(--border-color);
+         }
+         
+         .api-config-modal-header h3 {
+           margin: 0;
+           font-size: 1.2rem;
+           color: var(--text-primary);
+         }
+         
+         .api-config-modal-close {
+           background: none;
+           border: none;
+           font-size: 1.5rem;
+           cursor: pointer;
+           color: var(--text-secondary);
+         }
+         
+         .api-config-modal-content {
+           padding: 20px;
+         }
+         
+         .api-config-modal-footer {
+           padding: 16px 20px;
+           border-top: 1px solid var(--border-color);
+           display: flex;
+           justify-content: flex-end;
+         }
+         
+         .save-config-button {
+           background-color: var(--accent-color);
+           color: white;
+           border: none;
+           border-radius: 4px;
+           padding: 8px 16px;
+           font-size: 0.9rem;
+           cursor: pointer;
+         }
+         
+         .api-config-button {
+           background: none;
+           border: none;
+           cursor: pointer;
+           padding: 0;
+           margin-right: 8px;
+           font-size: 1rem;
+           color: var(--text-secondary);
+         }
+         
+         .api-controls {
+           display: flex;
+           align-items: center;
+         }
+         
+         .api-url-button {
+           background-color: var(--background-tertiary);
+           border: none;
+           border-radius: 4px;
+           padding: 4px 8px;
+           margin-right: 8px;
+           font-size: 0.8rem;
+           cursor: pointer;
+           color: var(--text-secondary);
+         }
+         
+         .api-config-summary {
+           background-color: var(--background-secondary);
+           border-radius: 4px;
+           padding: 8px 12px;
+           margin-bottom: 16px;
+         }
+         
+         .api-config-row {
+           display: flex;
+           align-items: center;
+           margin-bottom: 4px;
+         }
+         
+         .api-config-label {
+           font-weight: 500;
+           margin-right: 8px;
+         }
+         
+         .api-config-value {
+           font-family: monospace;
+           background: var(--background-tertiary);
+           padding: 2px 6px;
+           border-radius: 4px;
+           flex: 1;
+           margin-right: 8px;
+           overflow: hidden;
+           text-overflow: ellipsis;
+           white-space: nowrap;
+         }
+         
+         .small-config-button {
+           background: var(--accent-color);
+           color: white;
+           border: none;
+           border-radius: 4px;
+           padding: 2px 8px;
+           font-size: 0.8rem;
+           cursor: pointer;
+         }
+        `}
+      </style>
     </div>
   );
 };
