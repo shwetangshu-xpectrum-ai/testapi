@@ -10,6 +10,52 @@ interface ParamType {
   description?: string;
 }
 
+// Interface for employee data
+interface EmployeeDataType {
+  employee_id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone_number?: string;
+  hire_date?: string;
+  job_title?: string;
+  job_id?: number;
+  gov_id?: string;
+  hiring_manager_id?: string;
+  hr_manager_id?: string;
+  marital_status?: string;
+  state?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  sex?: string;
+  department?: string;
+  date_of_birth?: string;
+  status?: string;
+}
+
+// Interface for salary info
+interface SalaryInfoType {
+  employee_id: string;
+  base_salary?: number;
+  salary_type?: string;
+  bonus?: number;
+  commission?: number;
+  currency?: string;
+  salary_grade?: string;
+  last_salary_increase_date?: string;
+}
+
+// Interface for payroll data
+interface PayrollDataType {
+  employee_id: string;
+  base_salary?: number;
+  federal_tax?: number;
+  state_tax?: number;
+  total_tax?: number;
+  month?: string;
+  salary_received_day?: string;
+}
+
 interface EndpointDataType {
   title: string;
   method: string;
@@ -31,146 +77,86 @@ interface EndpointsType {
 const ApiDoc: React.FC = () => {
   const [activeTab, setActiveTab] = useState('shell');
   const [responseOpen, setResponseOpen] = useState(true);
-  const [openCategories, setOpenCategories] = useState<string[]>(['employee', 'salary', 'payroll', 'leave', 'insurance', 'policies']);
+  const [openCategories, setOpenCategories] = useState<string[]>(['employee', 'salary', 'payroll']);
   const [activeEndpoint, setActiveEndpoint] = useState('getAllEmployees');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const [animating, setAnimating] = useState(false);
+  const dropdownButtonRef = useRef<HTMLButtonElement>(null);
+  
+  // API call state
+  const [apiKey, setApiKey] = useState('');
+  const [apiResponse, setApiResponse] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showTryItModal, setShowTryItModal] = useState(false);
+  const [apiError, setApiError] = useState('');
+  const [requestParams, setRequestParams] = useState<{[key: string]: string}>({});
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const endpointData: EndpointsType = {
     getAllEmployees: {
       title: 'Get All Employees',
       method: 'GET',
       url: 'https://api.employeedb.com/v1/employees',
-      badge: 'Developing',
+      badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [
-        { name: 'latitude', type: 'string', required: true, example: 'Example: 43.6108202' },
-        { name: 'longitude', type: 'string', required: true, example: 'Example: -79.5238998' },
-        { name: 'cursor', type: 'string', required: true, example: 'pagination next val' }
+        { name: 'department', type: 'string', required: false, example: 'Example: Engineering' },
+        { name: 'status', type: 'string', required: false, example: 'Example: active' },
+        { name: 'page', type: 'integer', required: false, example: 'Example: 1' },
+        { name: 'limit', type: 'integer', required: false, example: 'Example: 10' }
       ],
       headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
       response: {
         example: `{
-  "cursor": "10",
-  "store_id_for_menu": 75,
-  "stores": [
+  "total": 100,
+  "page": 1,
+  "limit": 10,
+  "employees": [
     {
-      "address": "606 Browns Line",
-      "alcohol_age_limit": null,
-      "alcohol_age_verify": null,
-      "city": "Toronto - Etobicoke",
-      "city_slug": "Toronto_-_Etobicoke",
-      "delivery_available": true,
-      "distance": "1.9540454542823914",
-      "image_name": "",
-      "is_express": false,
-      "is_online": true,
-      "is_open": false,
-      "latitude": 43.605179,
-      "longitude": -79.546885,
-      "market_phone_number": "4169671111",
-      "name": "606 Browns Line",
-      "operating_hours": [
-        {
-          "day_name": "0",
-          "end_time": "02:00 AM",
-          "label": "Monday",
-          "start_time": "11:00 AM"
-        },
-        {
-          "day_name": "1",
-          "end_time": "02:00 AM",
-          "label": "Tuesday",
-          "start_time": "11:00 AM"
-        }
-      ]
+      "employee_id": "EMP001",
+      "first_name": "John",
+      "last_name": "Smith",
+      "email": "john.smith@example.com",
+      "phone_number": "+1 123-456-7890",
+      "hire_date": "2019-06-15",
+      "job_title": "Senior Developer",
+      "job_id": 5,
+      "hiring_manager_id": "EMP005",
+      "hr_manager_id": "EMP010",
+      "department": "Engineering",
+      "status": "active"
+    },
+    {
+      "employee_id": "EMP002",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "email": "jane.doe@example.com",
+      "phone_number": "+1 123-456-7891",
+      "hire_date": "2020-03-10",
+      "job_title": "Product Manager",
+      "job_id": 8, 
+      "hiring_manager_id": "EMP007",
+      "hr_manager_id": "EMP010",
+      "department": "Product",
+      "status": "active"
     }
-  ],
-  "sub_label_text": "Order and Pickup only in 15 minutes"
-}`
-      }
-    },
-    getOneEmployee: {
-      title: 'Get One Employee',
-      method: 'GET',
-      url: 'https://api.employeedb.com/v1/employees/one/{employee_code}',
-      badge: 'Developing',
-      breadcrumb: 'Employee',
-      queryParams: [],
-      headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
-        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
-      ],
-      response: {
-        example: `{
-  "employee_code": "EMP001",
-  "first_name": "John",
-  "last_name": "Smith",
-  "email": "john.smith@example.com",
-  "department": "Engineering",
-  "job_title": "Senior Developer",
-  "hire_date": "2019-06-15",
-  "status": "active",
-  "contact_info": {
-    "phone": "+1 123-456-7890",
-    "address": "123 Main St, San Francisco, CA"
-  }
-}`
-      }
-    },
-    getEmployee: {
-      title: 'Get Employee',
-      method: 'GET',
-      url: 'https://api.employeedb.com/v1/employees/{employee_id}',
-      badge: 'Developing',
-      breadcrumb: 'Employee',
-      queryParams: [],
-      headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
-        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
-      ],
-      response: {
-        example: `{
-  "id": "EMP001",
-  "first_name": "John",
-  "last_name": "Smith",
-  "email": "john.smith@example.com",
-  "department": "Engineering",
-  "job_title": "Senior Developer",
-  "hire_date": "2019-06-15",
-  "status": "active",
-  "contact_info": {
-    "phone": "+1 123-456-7890",
-    "address": "123 Main St, San Francisco, CA"
-  }
+  ]
 }`
       }
     },
     getEmployeeById: {
       title: 'Get Employee by ID',
       method: 'GET',
-      url: 'https://api.employeedb.com/v1/employees/id/{id}',
+      url: 'https://api.employeedb.com/v1/employees/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
@@ -181,26 +167,25 @@ const ApiDoc: React.FC = () => {
       ],
       response: {
         example: `{
-  "id": "EMP001",
+  "employee_id": "EMP001",
   "first_name": "John",
   "last_name": "Smith",
   "email": "john.smith@example.com",
-  "department": "Engineering",
-  "job_title": "Senior Developer",
+  "phone_number": "+1 123-456-7890",
   "hire_date": "2019-06-15",
-  "status": "active",
-  "manager_id": "EMP005",
-  "employment_type": "Full-time",
-  "location": "San Francisco, CA",
-  "contact_info": {
-    "phone": "+1 123-456-7890",
-    "address": "123 Main St, San Francisco, CA",
-    "emergency_contact": {
-      "name": "Jane Smith",
-      "relation": "Spouse",
-      "phone": "+1 123-456-7891"
-    }
-  }
+  "job_title": "Senior Developer",
+  "job_id": 5,
+  "gov_id": "123-45-6789",
+  "hiring_manager_id": "EMP005",
+  "hr_manager_id": "EMP010",
+  "marital_status": "married",
+  "state": "California",
+  "emergency_contact_name": "Jane Smith",
+  "emergency_contact_phone": "+1 123-456-7899",
+  "sex": "male",
+  "department": "Engineering",
+  "date_of_birth": "1985-04-12",
+  "status": "active"
 }`
       }
     },
@@ -208,33 +193,39 @@ const ApiDoc: React.FC = () => {
       title: 'Create Employee',
       method: 'POST',
       url: 'https://api.employeedb.com/v1/employees',
-      badge: 'Developing',
+      badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
       headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
       bodyParams: [
         { name: 'first_name', type: 'string', required: true, example: 'Example: John' },
         { name: 'last_name', type: 'string', required: true, example: 'Example: Smith' },
         { name: 'email', type: 'string', required: true, example: 'Example: john.smith@example.com' },
-        { name: 'department', type: 'string', required: true, example: 'Example: Engineering' },
-        { name: 'job_title', type: 'string', required: true, example: 'Example: Senior Developer' }
+        { name: 'phone_number', type: 'string', required: false, example: 'Example: +1 123-456-7890' },
+        { name: 'hire_date', type: 'string', required: true, example: 'Example: 2023-05-15' },
+        { name: 'job_title', type: 'string', required: true, example: 'Example: Software Developer' },
+        { name: 'job_id', type: 'integer', required: false, example: 'Example: 3' },
+        { name: 'hiring_manager_id', type: 'string', required: false, example: 'Example: EMP005' },
+        { name: 'hr_manager_id', type: 'string', required: false, example: 'Example: EMP010' },
+        { name: 'department', type: 'string', required: true, example: 'Example: Engineering' }
       ],
       response: {
         example: `{
-  "id": "EMP003",
+  "employee_id": "EMP003",
   "first_name": "John",
   "last_name": "Smith",
   "email": "john.smith@example.com",
-  "department": "Engineering",
-  "job_title": "Senior Developer",
+  "phone_number": "+1 123-456-7890",
   "hire_date": "2023-05-15",
+  "job_title": "Software Developer",
+  "job_id": 3,
+  "hiring_manager_id": "EMP005",
+  "hr_manager_id": "EMP010",
+  "department": "Engineering",
   "status": "active"
 }`
       }
@@ -243,31 +234,35 @@ const ApiDoc: React.FC = () => {
       title: 'Update Employee',
       method: 'PUT',
       url: 'https://api.employeedb.com/v1/employees/{employee_id}',
-      badge: 'Developing',
+      badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
       headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
       bodyParams: [
-        { name: 'department', type: 'string', required: false, example: 'Example: Marketing' },
-        { name: 'job_title', type: 'string', required: false, example: 'Example: Marketing Manager' },
+        { name: 'first_name', type: 'string', required: false, example: 'Example: John' },
+        { name: 'last_name', type: 'string', required: false, example: 'Example: Smith' },
+        { name: 'email', type: 'string', required: false, example: 'Example: john.smith@example.com' },
+        { name: 'phone_number', type: 'string', required: false, example: 'Example: +1 123-456-7890' },
+        { name: 'job_title', type: 'string', required: false, example: 'Example: Senior Developer' },
+        { name: 'job_id', type: 'integer', required: false, example: 'Example: 5' },
+        { name: 'department', type: 'string', required: false, example: 'Example: Engineering' },
         { name: 'status', type: 'string', required: false, example: 'Example: inactive' }
       ],
       response: {
         example: `{
-  "id": "EMP001",
+  "employee_id": "EMP001",
   "first_name": "John",
   "last_name": "Smith",
   "email": "john.smith@example.com",
-  "department": "Marketing",
-  "job_title": "Marketing Manager",
+  "phone_number": "+1 123-456-7890",
   "hire_date": "2019-06-15",
+  "job_title": "Senior Developer",
+  "job_id": 5,
+  "department": "Engineering",
   "status": "inactive",
   "updated_at": "2023-05-20T15:30:45Z"
 }`
@@ -277,16 +272,13 @@ const ApiDoc: React.FC = () => {
       title: 'Delete Employee',
       method: 'DELETE',
       url: 'https://api.employeedb.com/v1/employees/{employee_id}',
-      badge: 'Developing',
+      badge: 'Stable',
       breadcrumb: 'Employee',
       queryParams: [],
       headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
       response: {
         example: `{
@@ -299,75 +291,59 @@ const ApiDoc: React.FC = () => {
     getSalaryInfo: {
       title: 'Get Salary Information',
       method: 'GET',
-      url: 'https://api.employeedb.com/v1/salary_info',
-      badge: 'Developing',
+      url: 'https://api.employeedb.com/v1/salary/{employee_id}',
+      badge: 'Stable',
       breadcrumb: 'Salary',
-      queryParams: [
-        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP001' },
-        { name: 'year', type: 'integer', required: false, example: 'Example: 2023' }
-      ],
+      queryParams: [],
       headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
       response: {
         example: `{
   "employee_id": "EMP001",
-  "base_salary": 85000,
-  "bonus": 5000,
+  "base_salary": 85000.00,
+  "salary_type": "annual",
+  "bonus": 5000.00,
+  "commission": 0.00,
   "currency": "USD",
-  "effective_date": "2023-01-01",
-  "salary_reviews": [
-    {
-      "review_date": "2022-12-15",
-      "old_salary": 78000,
-      "new_salary": 85000,
-      "percentage_increase": 8.97
-    },
-    {
-      "review_date": "2021-12-15",
-      "old_salary": 72000,
-      "new_salary": 78000,
-      "percentage_increase": 8.33
-    }
-  ]
+  "salary_grade": "L3",
+  "last_salary_increase_date": "2023-01-01"
 }`
       }
     },
     updateSalary: {
       title: 'Update Salary',
       method: 'PUT',
-      url: 'https://api.employeedb.com/v1/salary_info/{employee_id}',
-      badge: 'Developing',
+      url: 'https://api.employeedb.com/v1/salary/{employee_id}',
+      badge: 'Stable',
       breadcrumb: 'Salary',
       queryParams: [],
       headerParams: [
-        { name: 'X-SOURCE', type: 'string', required: true, example: 'Example: admin' },
-        { name: 'X-LANG', type: 'string', required: true, example: 'Example: en' },
+        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'X-REQUEST-ID', type: 'string', required: true, example: 'Example: stacktics' },
-        { name: 'X-DEVICE-ID', type: 'string', required: true, example: 'Example: stacktics_device' },
-        { name: 'x-api-key', type: 'string', required: true, example: '' }
+        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
       bodyParams: [
-        { name: 'base_salary', type: 'number', required: true, example: 'Example: 90000' },
-        { name: 'bonus', type: 'number', required: false, example: 'Example: 6000' },
-        { name: 'effective_date', type: 'string', required: true, example: 'Example: 2023-06-01' },
-        { name: 'review_notes', type: 'string', required: false, example: 'Example: Annual performance review' }
+        { name: 'base_salary', type: 'number', required: true, example: 'Example: 90000.00' },
+        { name: 'salary_type', type: 'string', required: false, example: 'Example: annual' },
+        { name: 'bonus', type: 'number', required: false, example: 'Example: 6000.00' },
+        { name: 'commission', type: 'number', required: false, example: 'Example: 1000.00' },
+        { name: 'currency', type: 'string', required: false, example: 'Example: USD' },
+        { name: 'salary_grade', type: 'string', required: false, example: 'Example: L4' },
+        { name: 'last_salary_increase_date', type: 'string', required: true, example: 'Example: 2023-06-01' }
       ],
       response: {
         example: `{
   "employee_id": "EMP001",
-  "base_salary": 90000,
-  "bonus": 6000,
+  "base_salary": 90000.00,
+  "salary_type": "annual",
+  "bonus": 6000.00,
+  "commission": 1000.00,
   "currency": "USD",
-  "effective_date": "2023-06-01",
-  "previous_salary": 85000,
-  "percentage_increase": 5.88,
+  "salary_grade": "L4",
+  "last_salary_increase_date": "2023-06-01",
   "updated_at": "2023-05-25T14:20:10Z"
 }`
       }
@@ -375,90 +351,11 @@ const ApiDoc: React.FC = () => {
     getPayroll: {
       title: 'Get Payroll Data',
       method: 'GET',
-      url: 'https://api.employeedb.com/v1/payroll',
+      url: 'https://api.employeedb.com/v1/payroll/{employee_id}',
       badge: 'Stable',
       breadcrumb: 'Payroll',
       queryParams: [
-        { name: 'employee_id', type: 'string', required: false, example: 'Example: EMP001' },
-        { name: 'period', type: 'string', required: false, example: 'Example: 2023-06' }
-      ],
-      headerParams: [
-        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
-        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
-      ],
-      response: {
-        example: `{
-  "payroll_id": "PR2023-06-001",
-  "employee_id": "EMP001",
-  "period": "2023-06",
-  "gross_salary": 7083.33,
-  "deductions": {
-    "tax": 1770.83,
-    "insurance": 350,
-    "retirement": 425
-  },
-  "net_salary": 4537.50,
-  "payment_date": "2023-06-30",
-  "payment_status": "completed"
-}`
-      }
-    },
-    getLeaveRequests: {
-      title: 'Get Leave Requests',
-      method: 'GET',
-      url: 'https://api.employeedb.com/v1/leave_requests',
-      badge: 'Stable',
-      breadcrumb: 'Leave',
-      queryParams: [
-        { name: 'employee_id', type: 'string', required: false, example: 'Example: EMP001' },
-        { name: 'status', type: 'string', required: false, example: 'Example: approved' },
-        { name: 'start_date', type: 'string', required: false, example: 'Example: 2023-07-01' }
-      ],
-      headerParams: [
-        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
-        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
-      ],
-      response: {
-        example: `{
-  "leave_requests": [
-    {
-      "request_id": "LR001",
-      "employee_id": "EMP001",
-      "leave_type": "annual",
-      "start_date": "2023-07-10",
-      "end_date": "2023-07-14",
-      "days": 5,
-      "reason": "Vacation",
-      "status": "approved",
-      "approved_by": "EMP005",
-      "approved_date": "2023-06-15"
-    },
-    {
-      "request_id": "LR002",
-      "employee_id": "EMP001",
-      "leave_type": "sick",
-      "start_date": "2023-05-03",
-      "end_date": "2023-05-04",
-      "days": 2,
-      "reason": "Illness",
-      "status": "approved",
-      "approved_by": "EMP005",
-      "approved_date": "2023-05-03"
-    }
-  ]
-}`
-      }
-    },
-    getLeaveBalance: {
-      title: 'Get Leave Balance',
-      method: 'GET',
-      url: 'https://api.employeedb.com/v1/leave_balance_data',
-      badge: 'Stable',
-      breadcrumb: 'Leave',
-      queryParams: [
-        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP001' }
+        { name: 'month', type: 'string', required: false, example: 'Example: 2023-06' }
       ],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
@@ -468,154 +365,46 @@ const ApiDoc: React.FC = () => {
       response: {
         example: `{
   "employee_id": "EMP001",
-  "year": 2023,
-  "annual_leave": {
-    "entitled": 20,
-    "taken": 5,
-    "planned": 3,
-    "balance": 12
-  },
-  "sick_leave": {
-    "entitled": 10,
-    "taken": 2,
-    "balance": 8
-  },
-  "personal_leave": {
-    "entitled": 3,
-    "taken": 0,
-    "balance": 3
-  }
+  "base_salary": 7083.33,
+  "federal_tax": 1770.83,
+  "state_tax": 566.67,
+  "total_tax": 2337.50,
+  "month": "2023-06",
+  "salary_received_day": "2023-06-30"
 }`
       }
     },
-    getInsurancePlans: {
-      title: 'Get Insurance Plans',
-      method: 'GET',
-      url: 'https://api.employeedb.com/v1/insurance_plan',
+    createPayroll: {
+      title: 'Create Payroll Entry',
+      method: 'POST',
+      url: 'https://api.employeedb.com/v1/payroll',
       badge: 'Stable',
-      breadcrumb: 'Insurance',
-      queryParams: [
-        { name: 'plan_type', type: 'string', required: false, example: 'Example: health' }
-      ],
+      breadcrumb: 'Payroll',
+      queryParams: [],
       headerParams: [
         { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
         { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
         { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
       ],
-      response: {
-        example: `{
-  "insurance_plans": [
-    {
-      "plan_id": "INS001",
-      "plan_name": "Standard Health Plan",
-      "plan_type": "health",
-      "coverage_details": {
-        "hospital_coverage": "80%",
-        "outpatient_coverage": "70%",
-        "dental_coverage": "50%",
-        "vision_coverage": "50%"
-      },
-      "monthly_premium": 350,
-      "is_active": true
-    },
-    {
-      "plan_id": "INS002",
-      "plan_name": "Premium Health Plan",
-      "plan_type": "health",
-      "coverage_details": {
-        "hospital_coverage": "90%",
-        "outpatient_coverage": "80%",
-        "dental_coverage": "70%",
-        "vision_coverage": "70%"
-      },
-      "monthly_premium": 500,
-      "is_active": true
-    }
-  ]
-}`
-      }
-    },
-    getEmployeeInsurance: {
-      title: 'Get Employee Insurance Data',
-      method: 'GET',
-      url: 'https://api.employeedb.com/v1/employee_insurance_data',
-      badge: 'Stable',
-      breadcrumb: 'Insurance',
-      queryParams: [
-        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP001' }
-      ],
-      headerParams: [
-        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
-        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
+      bodyParams: [
+        { name: 'employee_id', type: 'string', required: true, example: 'Example: EMP001' },
+        { name: 'base_salary', type: 'number', required: true, example: 'Example: 7083.33' },
+        { name: 'federal_tax', type: 'number', required: true, example: 'Example: 1770.83' },
+        { name: 'state_tax', type: 'number', required: true, example: 'Example: 566.67' },
+        { name: 'total_tax', type: 'number', required: true, example: 'Example: 2337.50' },
+        { name: 'month', type: 'string', required: true, example: 'Example: 2023-06' },
+        { name: 'salary_received_day', type: 'string', required: true, example: 'Example: 2023-06-30' }
       ],
       response: {
         example: `{
   "employee_id": "EMP001",
-  "enrolled_plans": [
-    {
-      "plan_id": "INS001",
-      "enrollment_date": "2021-01-15",
-      "coverage_start_date": "2021-02-01",
-      "coverage_level": "family",
-      "dependents": [
-        {
-          "dependent_id": "DEP001",
-          "relation": "spouse",
-          "first_name": "Jane",
-          "last_name": "Smith"
-        },
-        {
-          "dependent_id": "DEP002",
-          "relation": "child",
-          "first_name": "Michael",
-          "last_name": "Smith"
-        }
-      ],
-      "monthly_premium": 450,
-      "status": "active"
-    }
-  ]
-}`
-      }
-    },
-    getCompanyPolicies: {
-      title: 'Get Company Policies',
-      method: 'GET',
-      url: 'https://api.employeedb.com/v1/company_policies',
-      badge: 'Stable',
-      breadcrumb: 'Policies',
-      queryParams: [
-        { name: 'policy_type', type: 'string', required: false, example: 'Example: leave' },
-        { name: 'department', type: 'string', required: false, example: 'Example: Engineering' }
-      ],
-      headerParams: [
-        { name: 'X-API-KEY', type: 'string', required: true, example: 'Example: your_api_key' },
-        { name: 'Content-Type', type: 'string', required: true, example: 'Example: application/json' },
-        { name: 'Authorization', type: 'string', required: true, example: 'Example: Bearer token' }
-      ],
-      response: {
-        example: `{
-  "policies": [
-    {
-      "policy_id": "POL001",
-      "policy_name": "Annual Leave Policy",
-      "policy_type": "leave",
-      "applicable_departments": ["All"],
-      "effective_date": "2023-01-01",
-      "content": "All full-time employees are entitled to 20 days of annual leave per calendar year...",
-      "last_updated": "2022-12-15"
-    },
-    {
-      "policy_id": "POL002",
-      "policy_name": "Remote Work Policy",
-      "policy_type": "work",
-      "applicable_departments": ["Engineering", "Marketing", "Customer Support"],
-      "effective_date": "2023-01-01",
-      "content": "Employees in eligible departments may work remotely up to 2 days per week...",
-      "last_updated": "2022-12-10"
-    }
-  ]
+  "base_salary": 7083.33,
+  "federal_tax": 1770.83,
+  "state_tax": 566.67,
+  "total_tax": 2337.50,
+  "month": "2023-06",
+  "salary_received_day": "2023-06-30",
+  "created_at": "2023-05-25T14:20:10Z"
 }`
       }
     }
@@ -623,39 +412,128 @@ const ApiDoc: React.FC = () => {
 
   const currentEndpoint = endpointData[activeEndpoint] || endpointData.getAllEmployees;
 
-  // Filter endpoints based on search term
-  const filterEndpoints = (endpoints: string[], term: string): string[] => {
-    if (!term) return endpoints;
-    const lowerTerm = term.toLowerCase();
-    return endpoints.filter(endpoint => {
-      const endpoint_data = endpointData[endpoint];
-      return (
-        endpoint.toLowerCase().includes(lowerTerm) || 
-        endpoint_data.title.toLowerCase().includes(lowerTerm) ||
-        endpoint_data.url.toLowerCase().includes(lowerTerm) ||
-        endpoint_data.method.toLowerCase().includes(lowerTerm) ||
-        endpoint_data.breadcrumb.toLowerCase().includes(lowerTerm)
-      );
-    });
+  // Function to handle API calls
+  const handleApiCall = async () => {
+    if (!apiKey) {
+      setApiError('API key is required');
+      return;
+    }
+    
+    setIsLoading(true);
+    setApiError('');
+
+    try {
+      // Prepare the API URL with path parameters
+      let apiUrl = currentEndpoint.url;
+      if (apiUrl.includes('{employee_id}') && requestParams.employee_id) {
+        apiUrl = apiUrl.replace('{employee_id}', requestParams.employee_id);
+      }
+
+      // Add query parameters
+      if (currentEndpoint.queryParams.length > 0) {
+        const queryParams = new URLSearchParams();
+        
+        currentEndpoint.queryParams.forEach(param => {
+          if (requestParams[param.name]) {
+            queryParams.append(param.name, requestParams[param.name]);
+          }
+        });
+        
+        const queryString = queryParams.toString();
+        if (queryString) {
+          apiUrl += `?${queryString}`;
+        }
+      }
+
+      // Create headers for the request
+      const headers = {
+        'Content-Type': 'application/json',
+        'X-API-KEY': apiKey,
+        'Authorization': `Bearer ${requestParams.authorization || 'your_token_here'}`
+      };
+
+      // Prepare request options
+      const options: RequestInit = {
+        method: currentEndpoint.method,
+        headers
+      };
+
+      // Add body for POST, PUT methods
+      if (['POST', 'PUT'].includes(currentEndpoint.method) && currentEndpoint.bodyParams) {
+        const bodyData: {[key: string]: any} = {};
+        
+        currentEndpoint.bodyParams.forEach(param => {
+          if (requestParams[param.name]) {
+            // Convert numbers to number type
+            if (param.type === 'number' || param.type === 'integer') {
+              bodyData[param.name] = Number(requestParams[param.name]);
+            } else {
+              bodyData[param.name] = requestParams[param.name];
+            }
+          }
+        });
+        
+        options.body = JSON.stringify(bodyData);
+      }
+
+      // Make the API call
+      const response = await fetch(apiUrl, options);
+      const data = await response.json();
+
+      // Set the response
+      setApiResponse(data);
+      setIsLoading(false);
+    } catch (error) {
+      console.error('API call error:', error);
+      setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
+      setIsLoading(false);
+    }
   };
 
-  // Get filtered endpoints for each category
-  const getFilteredEndpointsForCategory = (category: string): string[] => {
-    const categoryPrefixMap: {[key: string]: string} = {
-      'employee': 'Employee',
-      'salary': 'Salary',
-      'payroll': 'Payroll',
-      'leave': 'Leave',
-      'insurance': 'Insurance',
-      'policies': 'Policies'
-    };
+  // Initialize request params with example values
+  const initializeRequestParams = () => {
+    const params: {[key: string]: string} = {};
     
-    const prefix = categoryPrefixMap[category] || '';
-    const categoryEndpoints = Object.keys(endpointData).filter(endpoint => 
-      endpointData[endpoint].breadcrumb.toLowerCase() === category.toLowerCase()
-    );
+    // Add path parameter
+    if (currentEndpoint.url.includes('{employee_id}')) {
+      params.employee_id = 'EMP001';
+    }
     
-    return filterEndpoints(categoryEndpoints, searchTerm);
+    // Add query parameters
+    currentEndpoint.queryParams.forEach(param => {
+      if (param.example) {
+        const exampleValue = param.example.replace('Example: ', '');
+        params[param.name] = exampleValue;
+      }
+    });
+    
+    // Add body parameters
+    if (currentEndpoint.bodyParams) {
+      currentEndpoint.bodyParams.forEach(param => {
+        if (param.example) {
+          const exampleValue = param.example.replace('Example: ', '');
+          params[param.name] = exampleValue;
+        }
+      });
+    }
+    
+    setRequestParams(params);
+  };
+
+  // Open the Try It modal
+  const openTryItModal = () => {
+    initializeRequestParams();
+    setApiResponse(null);
+    setApiError('');
+    setShowTryItModal(true);
+  };
+
+  // Update a single request parameter
+  const updateRequestParam = (paramName: string, value: string) => {
+    setRequestParams(prev => ({
+      ...prev,
+      [paramName]: value
+    }));
   };
 
   const handleCategoryClick = (category: string) => {
@@ -688,9 +566,6 @@ const ApiDoc: React.FC = () => {
     if (category === 'employee' && !activeEndpoint.includes('Employee')) setActiveEndpoint('getAllEmployees');
     if (category === 'salary' && !activeEndpoint.includes('Salary')) setActiveEndpoint('getSalaryInfo');
     if (category === 'payroll' && !activeEndpoint.includes('Payroll')) setActiveEndpoint('getPayroll');
-    if (category === 'leave' && !activeEndpoint.includes('Leave')) setActiveEndpoint('getLeaveRequests');
-    if (category === 'insurance' && !activeEndpoint.includes('Insurance')) setActiveEndpoint('getInsurancePlans');
-    if (category === 'policies' && !activeEndpoint.includes('Policies')) setActiveEndpoint('getCompanyPolicies');
   };
 
   const handleEndpointClick = (endpoint: string, event: React.MouseEvent) => {
@@ -806,6 +681,109 @@ print(data)`;
     return `// ${language.charAt(0).toUpperCase() + language.slice(1)} example would go here`;
   };
 
+  // Function to copy code to clipboard
+  const copyCodeToClipboard = (code: string) => {
+    navigator.clipboard.writeText(code)
+      .then(() => {
+        setCopiedCode(true);
+        setTimeout(() => setCopiedCode(false), 2000);
+      })
+      .catch(err => {
+        console.error('Failed to copy code: ', err);
+      });
+  };
+
+  // Update the response schema component to match the example data
+  const renderResponseSchema = () => {
+    return (
+      <div className="response-schema">
+        <div className="response-type-header">application/json</div>
+        
+        <div className="schema-row">
+          <div className="field-key">employee_id</div>
+          <div className="field-type">string</div>
+          <div className="field-required">required</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">first_name</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">last_name</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">email</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">phone_number</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">hire_date</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">job_title</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">job_id</div>
+          <div className="field-type">integer</div>
+          <div className="field-required">optional</div>
+        </div>
+        
+        <div className="schema-row">
+          <div className="field-key">department</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+
+        <div className="schema-row">
+          <div className="field-key">status</div>
+          <div className="field-type">string</div>
+          <div className="field-required">optional</div>
+        </div>
+      </div>
+    );
+  };
+
+  // Update response example to match the screenshot
+  const renderResponseExample = () => {
+    return (
+      <pre className="json-example">
+        <div dangerouslySetInnerHTML={{ 
+          __html: `{
+  <span class="property">"employee_id"</span>: <span class="string">"EMP001"</span>,
+  <span class="property">"first_name"</span>: <span class="string">"John"</span>,
+  <span class="property">"last_name"</span>: <span class="string">"Smith"</span>,
+  <span class="property">"email"</span>: <span class="string">"john.smith@example.com"</span>,
+  <span class="property">"phone_number"</span>: <span class="string">"+1 123-456-7890"</span>,
+  <span class="property">"hire_date"</span>: <span class="string">"2019-06-15"</span>,
+  <span class="property">"job_title"</span>: <span class="string">"Senior Developer"</span>,
+  <span class="property">"job_id"</span>: <span class="number">5</span>,
+  <span class="property">"department"</span>: <span class="string">"Engineering"</span>,
+  <span class="property">"status"</span>: <span class="string">"active"</span>
+}`
+        }} />
+      </pre>
+    );
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -892,6 +870,41 @@ print(data)`;
     document.documentElement.classList.add('dark-theme');
   }, []);
 
+  // Add search filter function
+  const getFilteredEndpoints = (category: string) => {
+    if (!searchTerm) {
+      // If no search term, return all endpoints for this category
+      return Object.keys(endpointData).filter(key => endpointData[key].breadcrumb.toLowerCase() === category.toLowerCase());
+    }
+    
+    // Filter endpoints by search term and category
+    return Object.keys(endpointData).filter(key => {
+      const endpoint = endpointData[key];
+      return endpoint.breadcrumb.toLowerCase() === category.toLowerCase() && 
+        (endpoint.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+         key.toLowerCase().includes(searchTerm.toLowerCase()));
+    });
+  };
+
+  // Handle search input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const searchText = e.target.value;
+    setSearchTerm(searchText);
+    
+    // If search is not empty, open all categories to show search results
+    if (searchText) {
+      setOpenCategories(['employee', 'salary', 'payroll']);
+    }
+  };
+
+  // Add a function to highlight search matches
+  const highlightMatch = (text: string) => {
+    if (!searchTerm || searchTerm.length < 2) return text;
+    
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<span class="highlight-match">$1</span>');
+  };
+
   return (
     <div className={`api-doc-container ${mobileMenuOpen ? 'mobile-menu-open' : ''} ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       {/* Mobile menu toggle */}
@@ -909,7 +922,7 @@ print(data)`;
           <div className="api-logo">
             <img src="/logo.svg" alt="ai logo" width="20" height="20" />
           </div>
-          <h3 className="logo-text">xpectrum-ai</h3>
+          <h3 className="logo-text">employee-api</h3>
           <div className="theme-toggle" onClick={toggleTheme}>
             <img src={darkMode ? "/moon.svg" : "/sun.svg"} alt={darkMode ? "light mode" : "dark mode"} width="16" height="16" />
           </div>
@@ -920,8 +933,17 @@ print(data)`;
             type="text" 
             placeholder="Search endpoints..." 
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
           />
+          {searchTerm && (
+            <button 
+              className="search-clear-button" 
+              onClick={() => setSearchTerm('')}
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          )}
         </div>
         
         <div className="sidebar-section">
@@ -930,23 +952,26 @@ print(data)`;
             onClick={() => handleCategoryClick('employee')}
             data-category="employee"
           >
-            <span>Employee</span>
+            <span>Employee Management</span>
             <span className="chevron">▼</span>
           </div>
           <ul className={`section-links ${openCategories.includes('employee') ? 'visible' : 'hidden'}`}>
-            {getFilteredEndpointsForCategory('employee').map((endpoint) => (
+            {getFilteredEndpoints('employee').map(endpointKey => (
               <li 
-                key={endpoint}
-                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
-                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
-                data-endpoint={endpoint}
+                key={endpointKey}
+                className={`section-link ${activeEndpoint === endpointKey ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpointKey, event)}
+                data-endpoint={endpointKey}
               >
-                <span>{endpointData[endpoint].title}</span>
-                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
-                  {endpointData[endpoint].method}
+                <span dangerouslySetInnerHTML={{ __html: highlightMatch(endpointData[endpointKey].title) }}></span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpointKey].method)}`}>
+                  {endpointData[endpointKey].method}
                 </span>
               </li>
             ))}
+            {getFilteredEndpoints('employee').length === 0 && searchTerm && (
+              <li className="no-results">No matching endpoints found</li>
+            )}
           </ul>
         </div>
         
@@ -956,23 +981,26 @@ print(data)`;
             onClick={() => handleCategoryClick('salary')}
             data-category="salary"
           >
-            <span>Salary Information</span>
+            <span>Salary Management</span>
             <span className="chevron">▼</span>
           </div>
           <ul className={`section-links ${openCategories.includes('salary') ? 'visible' : 'hidden'}`}>
-            {getFilteredEndpointsForCategory('salary').map((endpoint) => (
+            {getFilteredEndpoints('salary').map(endpointKey => (
               <li 
-                key={endpoint}
-                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
-                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
-                data-endpoint={endpoint}
+                key={endpointKey}
+                className={`section-link ${activeEndpoint === endpointKey ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpointKey, event)}
+                data-endpoint={endpointKey}
               >
-                <span>{endpointData[endpoint].title}</span>
-                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
-                  {endpointData[endpoint].method}
+                <span dangerouslySetInnerHTML={{ __html: highlightMatch(endpointData[endpointKey].title) }}></span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpointKey].method)}`}>
+                  {endpointData[endpointKey].method}
                 </span>
               </li>
             ))}
+            {getFilteredEndpoints('salary').length === 0 && searchTerm && (
+              <li className="no-results">No matching endpoints found</li>
+            )}
           </ul>
         </div>
         
@@ -982,99 +1010,26 @@ print(data)`;
             onClick={() => handleCategoryClick('payroll')}
             data-category="payroll"
           >
-            <span>Payroll</span>
+            <span>Payroll Management</span>
             <span className="chevron">▼</span>
           </div>
           <ul className={`section-links ${openCategories.includes('payroll') ? 'visible' : 'hidden'}`}>
-            {getFilteredEndpointsForCategory('payroll').map((endpoint) => (
+            {getFilteredEndpoints('payroll').map(endpointKey => (
               <li 
-                key={endpoint}
-                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
-                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
-                data-endpoint={endpoint}
+                key={endpointKey}
+                className={`section-link ${activeEndpoint === endpointKey ? 'active' : ''}`}
+                onClick={(event) => handleMobileEndpointClick(endpointKey, event)}
+                data-endpoint={endpointKey}
               >
-                <span>{endpointData[endpoint].title}</span>
-                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
-                  {endpointData[endpoint].method}
+                <span dangerouslySetInnerHTML={{ __html: highlightMatch(endpointData[endpointKey].title) }}></span>
+                <span className={`method-tag ${getMethodClassName(endpointData[endpointKey].method)}`}>
+                  {endpointData[endpointKey].method}
                 </span>
               </li>
             ))}
-          </ul>
-        </div>
-        
-        <div className="sidebar-section">
-          <div 
-            className={`section-header ${openCategories.includes('leave') ? 'active' : ''}`}
-            onClick={() => handleCategoryClick('leave')}
-            data-category="leave"
-          >
-            <span>Leave Management</span>
-            <span className="chevron">▼</span>
-          </div>
-          <ul className={`section-links ${openCategories.includes('leave') ? 'visible' : 'hidden'}`}>
-            {getFilteredEndpointsForCategory('leave').map((endpoint) => (
-              <li 
-                key={endpoint}
-                className={`section-link ${activeEndpoint === endpoint ? 'active' : ''}`}
-                onClick={(event) => handleMobileEndpointClick(endpoint, event)}
-                data-endpoint={endpoint}
-              >
-                <span>{endpointData[endpoint].title}</span>
-                <span className={`method-tag ${getMethodClassName(endpointData[endpoint].method)}`}>
-                  {endpointData[endpoint].method}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        <div className="sidebar-section">
-          <div 
-            className={`section-header ${openCategories.includes('insurance') ? 'active' : ''}`}
-            onClick={() => handleCategoryClick('insurance')}
-            data-category="insurance"
-          >
-            <span>Insurance</span>
-            <span className="chevron">▼</span>
-          </div>
-          <ul className={`section-links ${openCategories.includes('insurance') ? 'visible' : 'hidden'}`}>
-            <li 
-              className={`section-link ${activeEndpoint === 'getInsurancePlans' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getInsurancePlans', event)}
-              data-endpoint="getInsurancePlans"
-            >
-              <span>Get Insurance Plans</span>
-              <span className="method-tag get">GET</span>
-            </li>
-            <li 
-              className={`section-link ${activeEndpoint === 'getEmployeeInsurance' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getEmployeeInsurance', event)}
-              data-endpoint="getEmployeeInsurance"
-            >
-              <span>Get Employee Insurance</span>
-              <span className="method-tag get">GET</span>
-            </li>
-          </ul>
-        </div>
-        
-        <div className="sidebar-section">
-          <div 
-            className={`section-header ${openCategories.includes('policies') ? 'active' : ''}`}
-            onClick={() => handleCategoryClick('policies')}
-            data-category="policies"
-          >
-            <span>Company Policies</span>
-            <span className="chevron">▼</span>
-          </div>
-          <ul className={`section-links ${openCategories.includes('policies') ? 'visible' : 'hidden'}`}>
-            <li 
-              className={`section-link ${activeEndpoint === 'getCompanyPolicies' ? 'active' : ''}`}
-              onClick={(event) => handleMobileEndpointClick('getCompanyPolicies', event)}
-              data-endpoint="getCompanyPolicies"
-            >
-              <span>Get Company Policies</span>
-              <span className="method-tag get">GET</span>
-            </li>
+            {getFilteredEndpoints('payroll').length === 0 && searchTerm && (
+              <li className="no-results">No matching endpoints found</li>
+            )}
           </ul>
         </div>
       </aside>
@@ -1099,7 +1054,7 @@ print(data)`;
             {currentEndpoint.method}
           </div>
           <div className="endpoint-url">{currentEndpoint.url}</div>
-          <button className="try-it-button">Try it</button>
+          <button className="try-it-button" onClick={openTryItModal}>Try it</button>
         </div>
 
         <div className="api-section">
@@ -1306,6 +1261,12 @@ print(data)`;
           </div>
           
           <div className="code-sample">
+            <button 
+              className={`copy-button ${copiedCode ? 'copied' : ''}`} 
+              onClick={() => copyCodeToClipboard(renderCodeSample(activeTab))}
+            >
+              {copiedCode ? 'Copied!' : 'Copy'}
+            </button>
             <pre className="code-block">
               {renderCodeSample(activeTab)}
             </pre>
@@ -1331,187 +1292,129 @@ print(data)`;
                 
                 <div className="response-columns">
                   <div className="response-left-column">
-                    <div className="response-schema">
-                      <div className="response-type-header">application/json</div>
-                      
-                      <div className="schema-row">
-                        <div className="field-key">cursor</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row">
-                        <div className="field-key">store_id_for_menu</div>
-                        <div className="field-type">integer</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row parent">
-                        <div className="toggle-icon">▼</div>
-                        <div className="field-key">stores</div>
-                        <div className="field-type">array [object (24)]</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">address</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">alcohol_age_limit</div>
-                        <div className="field-type">null</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">alcohol_age_verify</div>
-                        <div className="field-type">null</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">city</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">city_slug</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">delivery_available</div>
-                        <div className="field-type">boolean</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">distance</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                        <div className="field-description">distance of store from searched lat lng</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">image_name</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">is_express</div>
-                        <div className="field-type">boolean</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">is_online</div>
-                        <div className="field-type">boolean</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">is_open</div>
-                        <div className="field-type">boolean</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">latitude</div>
-                        <div className="field-type">number</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">longitude</div>
-                        <div className="field-type">number</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">market_phone_number</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">name</div>
-                        <div className="field-type">string</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child parent">
-                        <div className="toggle-icon">▶</div>
-                        <div className="field-key">operating_hours</div>
-                        <div className="field-type">array [object (4)]</div>
-                        <div className="field-required">required</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-description">store hours</div>
-                      </div>
-                      
-                      <div className="schema-row child">
-                        <div className="field-key">pickup_available</div>
-                        <div className="field-type">boolean</div>
-                        <div className="field-required">required</div>
-                      </div>
-                    </div>
+                    {renderResponseSchema()}
                   </div>
                   <div className="response-right-column">
                     <div className="example-header">Example</div>
-                    <pre className="json-example">
-                      <div dangerouslySetInnerHTML={{ 
-                        __html: `{
-  <span class="property">"cursor"</span>: <span class="string">"10"</span>,
-  <span class="property">"store_id_for_menu"</span>: <span class="number">75</span>,
-  <span class="property">"stores"</span>: [
-    {
-      <span class="property">"address"</span>: <span class="string">" 606 Browns Line"</span>,
-      <span class="property">"alcohol_age_limit"</span>: <span class="null">null</span>,
-      <span class="property">"alcohol_age_verify"</span>: <span class="null">null</span>,
-      <span class="property">"city"</span>: <span class="string">"Toronto - Etobicoke"</span>,
-      <span class="property">"city_slug"</span>: <span class="string">"Toronto_-_Etobicoke"</span>,
-      <span class="property">"delivery_available"</span>: <span class="boolean">true</span>,
-      <span class="property">"distance"</span>: <span class="string">"1.9540454542823914"</span>,
-      <span class="property">"image_name"</span>: <span class="string">""</span>,
-      <span class="property">"is_express"</span>: <span class="boolean">false</span>,
-      <span class="property">"is_online"</span>: <span class="boolean">true</span>,
-      <span class="property">"is_open"</span>: <span class="boolean">false</span>,
-      <span class="property">"latitude"</span>: <span class="number">43.605179</span>,
-      <span class="property">"longitude"</span>: <span class="number">-79.546885</span>,
-      <span class="property">"market_phone_number"</span>: <span class="string">"4169671111"</span>,
-      <span class="property">"name"</span>: <span class="string">"606 Browns Line"</span>,
-      <span class="property">"operating_hours"</span>: [
-        {
-          <span class="property">"day_name"</span>: <span class="string">"0"</span>,
-          <span class="property">"end_time"</span>: <span class="string">"02:00 AM"</span>,
-          <span class="property">"label"</span>: <span class="string">"Monday"</span>,
-          <span class="property">"start_time"</span>: <span class="string">"11:00 AM"</span>
-        },
-        {
-          <span class="property">"day_name"</span>: <span class="string">"1"</span>,
-          <span class="property">"end_time"</span>: <span class="string">"02:00 AM"</span>,
-          <span class="property">"label"</span>: <span class="string">"Tuesday"</span>,
-          <span class="property">"start_time"</span>: <span class="string">"11:00 AM"</span>
-        }
-      ]
-    }
-  ],
-  <span class="property">"sub_label_text"</span>: <span class="string">"Order and Pickup only in 15 minutes"</span>
-}`
-                      }} />
-                    </pre>
+                    {renderResponseExample()}
                   </div>
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Try It Modal */}
+        {showTryItModal && (
+          <div className="try-it-modal-overlay">
+            <div className="try-it-modal">
+              <div className="try-it-modal-header">
+                <h2>Try API Request</h2>
+                <button 
+                  className="try-it-modal-close" 
+                  onClick={() => setShowTryItModal(false)}
+                >
+                  &times;
+                </button>
+              </div>
+              
+              <div className="try-it-modal-content">
+                <div className="try-it-section">
+                  <h3>Authentication</h3>
+                  <div className="try-it-form-group">
+                    <label htmlFor="api-key">API Key</label>
+                    <input
+                      type="text"
+                      id="api-key"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Enter your API key"
+                    />
+                  </div>
+                  
+                  {currentEndpoint.url.includes('{employee_id}') && (
+                    <div className="try-it-form-group">
+                      <label htmlFor="employee-id">Employee ID</label>
+                      <input
+                        type="text"
+                        id="employee-id"
+                        value={requestParams.employee_id || ''}
+                        onChange={(e) => updateRequestParam('employee_id', e.target.value)}
+                        placeholder="Employee ID"
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                {currentEndpoint.queryParams.length > 0 && (
+                  <div className="try-it-section">
+                    <h3>Query Parameters</h3>
+                    {currentEndpoint.queryParams.map((param, index) => (
+                      <div className="try-it-form-group" key={index}>
+                        <label htmlFor={`param-${param.name}`}>
+                          {param.name} {param.required && <span className="required-badge">required</span>}
+                        </label>
+                        <input
+                          type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
+                          id={`param-${param.name}`}
+                          value={requestParams[param.name] || ''}
+                          onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                          placeholder={param.example || param.name}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {currentEndpoint.bodyParams && currentEndpoint.bodyParams.length > 0 && (
+                  <div className="try-it-section">
+                    <h3>Body Parameters</h3>
+                    {currentEndpoint.bodyParams.map((param, index) => (
+                      <div className="try-it-form-group" key={index}>
+                        <label htmlFor={`body-param-${param.name}`}>
+                          {param.name} {param.required && <span className="required-badge">required</span>}
+                        </label>
+                        <input
+                          type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
+                          id={`body-param-${param.name}`}
+                          value={requestParams[param.name] || ''}
+                          onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                          placeholder={param.example || param.name}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="try-it-action">
+                  <button 
+                    className={`try-it-send-button ${isLoading ? 'loading' : ''}`} 
+                    onClick={handleApiCall}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Sending...' : 'Send Request'}
+                  </button>
+                </div>
+                
+                {apiError && (
+                  <div className="try-it-error">
+                    <h3>Error</h3>
+                    <div className="error-message">{apiError}</div>
+                  </div>
+                )}
+                
+                {apiResponse && (
+                  <div className="try-it-response">
+                    <h3>Response</h3>
+                    <pre className="response-body">
+                      {JSON.stringify(apiResponse, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
       
       {/* Custom cursor for enhanced UI effect */}
