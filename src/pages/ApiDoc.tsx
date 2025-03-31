@@ -96,6 +96,37 @@ const ApiDoc: React.FC = () => {
   const [apiError, setApiError] = useState('');
   const [requestParams, setRequestParams] = useState<{[key: string]: string}>({});
   const [copiedCode, setCopiedCode] = useState(false);
+  const [activeRequestTab, setActiveRequestTab] = useState('params');
+  const [responseDetails, setResponseDetails] = useState<{
+    status: number;
+    statusText: string;
+    time: number;
+    size: string;
+  } | null>(null);
+  const [requestHeaders, setRequestHeaders] = useState<{[key: string]: string}>({
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer token123',
+  });
+  const [rawBody, setRawBody] = useState('');
+  const [bodyType, setBodyType] = useState('form');
+  const [showEnvironmentModal, setShowEnvironmentModal] = useState(false);
+  const [environments, setEnvironments] = useState<Array<{name: string, variables: {[key: string]: string}}>>([
+    { 
+      name: 'Development', 
+      variables: { 
+        'baseUrl': 'https://dev-api.employeedb.com/v1',
+        'apiKey': 'dev_api_key_123'
+      } 
+    },
+    { 
+      name: 'Production', 
+      variables: { 
+        'baseUrl': 'https://api.employeedb.com/v1',
+        'apiKey': 'prod_api_key_456'
+      } 
+    }
+  ]);
+  const [activeEnvironment, setActiveEnvironment] = useState('Development');
 
   const endpointData: EndpointsType = {
     getAllEmployees: {
@@ -421,6 +452,10 @@ const ApiDoc: React.FC = () => {
     
     setIsLoading(true);
     setApiError('');
+    setResponseDetails(null);
+    setApiResponse(null);
+    
+    const startTime = Date.now();
 
     try {
       // Prepare the API URL with path parameters
@@ -446,10 +481,9 @@ const ApiDoc: React.FC = () => {
       }
 
       // Create headers for the request
-      const headers = {
-        'Content-Type': 'application/json',
+      const headers: {[key: string]: string} = {
+        ...requestHeaders,
         'X-API-KEY': apiKey,
-        'Authorization': `Bearer ${requestParams.authorization || 'your_token_here'}`
       };
 
       // Prepare request options
@@ -459,32 +493,66 @@ const ApiDoc: React.FC = () => {
       };
 
       // Add body for POST, PUT methods
-      if (['POST', 'PUT'].includes(currentEndpoint.method) && currentEndpoint.bodyParams) {
-        const bodyData: {[key: string]: any} = {};
-        
-        currentEndpoint.bodyParams.forEach(param => {
-          if (requestParams[param.name]) {
-            // Convert numbers to number type
-            if (param.type === 'number' || param.type === 'integer') {
-              bodyData[param.name] = Number(requestParams[param.name]);
-            } else {
-              bodyData[param.name] = requestParams[param.name];
-            }
+      if (['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method)) {
+        if (bodyType === 'raw' && rawBody) {
+          options.body = rawBody;
+        } else {
+          const bodyData: {[key: string]: any} = {};
+          
+          if (currentEndpoint.bodyParams) {
+            currentEndpoint.bodyParams.forEach(param => {
+              if (requestParams[param.name]) {
+                // Convert numbers to number type
+                if (param.type === 'number' || param.type === 'integer') {
+                  bodyData[param.name] = Number(requestParams[param.name]);
+                } else {
+                  bodyData[param.name] = requestParams[param.name];
+                }
+              }
+            });
           }
-        });
-        
-        options.body = JSON.stringify(bodyData);
+          
+          options.body = JSON.stringify(bodyData);
+        }
       }
+
+      // Display request details in console for debugging
+      console.log('Request URL:', apiUrl);
+      console.log('Request Options:', options);
 
       // Make the API call
       const response = await fetch(apiUrl, options);
-      const data = await response.json();
+      const responseData = await response.json();
+      const endTime = Date.now();
+      
+      // Calculate response size
+      const responseSize = JSON.stringify(responseData).length;
+      const formattedSize = responseSize < 1024 
+        ? `${responseSize} B` 
+        : `${(responseSize / 1024).toFixed(2)} KB`;
+
+      // Set response details
+      setResponseDetails({
+        status: response.status,
+        statusText: response.statusText,
+        time: endTime - startTime,
+        size: formattedSize
+      });
 
       // Set the response
-      setApiResponse(data);
+      setApiResponse(responseData);
       setIsLoading(false);
     } catch (error) {
       console.error('API call error:', error);
+      const endTime = Date.now();
+      
+      setResponseDetails({
+        status: 0,
+        statusText: 'Failed',
+        time: endTime - startTime,
+        size: '0 B'
+      });
+      
       setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
       setIsLoading(false);
     }
@@ -515,9 +583,35 @@ const ApiDoc: React.FC = () => {
           params[param.name] = exampleValue;
         }
       });
+      
+      // Set raw body JSON
+      const bodyObject = Object.fromEntries(
+        currentEndpoint.bodyParams.map(param => [
+          param.name,
+          param.example ? param.example.replace('Example: ', '') : ''
+        ])
+      );
+      setRawBody(JSON.stringify(bodyObject, null, 2));
     }
     
     setRequestParams(params);
+  };
+
+  // Add a header
+  const addRequestHeader = (key: string, value: string) => {
+    setRequestHeaders(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  // Remove a header
+  const removeRequestHeader = (key: string) => {
+    setRequestHeaders(prev => {
+      const newHeaders = { ...prev };
+      delete newHeaders[key];
+      return newHeaders;
+    });
   };
 
   // Open the Try It modal
@@ -525,6 +619,31 @@ const ApiDoc: React.FC = () => {
     initializeRequestParams();
     setApiResponse(null);
     setApiError('');
+    setResponseDetails(null);
+    setActiveRequestTab('params');
+    setBodyType('form');
+    
+    // Set initial headers based on current endpoint
+    const initialHeaders: {[key: string]: string} = {
+      'Content-Type': 'application/json'
+    };
+    
+    currentEndpoint.headerParams.forEach(param => {
+      if (param.name !== 'X-API-KEY') { // API key is handled separately
+        initialHeaders[param.name] = param.example ? param.example.replace('Example: ', '') : '';
+      }
+    });
+    
+    setRequestHeaders(initialHeaders);
+    
+    // Set API key from environment if available
+    const env = environments.find(e => e.name === activeEnvironment);
+    if (env && env.variables.apiKey) {
+      setApiKey(env.variables.apiKey);
+    } else {
+      setApiKey('');
+    }
+    
     setShowTryItModal(true);
   };
 
@@ -534,6 +653,21 @@ const ApiDoc: React.FC = () => {
       ...prev,
       [paramName]: value
     }));
+  };
+
+  // Toggle environment modal
+  const toggleEnvironmentModal = () => {
+    setShowEnvironmentModal(!showEnvironmentModal);
+  };
+
+  // Select an environment
+  const selectEnvironment = (envName: string) => {
+    setActiveEnvironment(envName);
+    const env = environments.find(e => e.name === envName);
+    if (env && env.variables.apiKey) {
+      setApiKey(env.variables.apiKey);
+    }
+    setShowEnvironmentModal(false);
   };
 
   const handleCategoryClick = (category: string) => {
@@ -1309,109 +1443,356 @@ print(data)`;
           <div className="try-it-modal-overlay">
             <div className="try-it-modal">
               <div className="try-it-modal-header">
-                <h2>Try API Request</h2>
+                <div className="try-it-title-section">
+                  <span className={`endpoint-method ${getMethodClassName(currentEndpoint.method)}`}>
+                    {currentEndpoint.method}
+                  </span>
+                  <h2>{currentEndpoint.title}</h2>
+                </div>
+                <div className="try-it-controls">
+                  <button 
+                    className="environment-selector" 
+                    onClick={toggleEnvironmentModal}
+                  >
+                    {activeEnvironment} <span className="dropdown-arrow">▼</span>
+                  </button>
+                  <button 
+                    className="try-it-modal-close" 
+                    onClick={() => setShowTryItModal(false)}
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+              
+              <div className="try-it-url-bar">
+                <span className={`method-badge ${getMethodClassName(currentEndpoint.method)}`}>
+                  {currentEndpoint.method}
+                </span>
+                <div className="url-display">
+                  {currentEndpoint.url.includes('{employee_id}') 
+                    ? currentEndpoint.url.replace('{employee_id}', requestParams.employee_id || '{employee_id}')
+                    : currentEndpoint.url
+                  }
+                </div>
                 <button 
-                  className="try-it-modal-close" 
-                  onClick={() => setShowTryItModal(false)}
+                  className={`send-request-button ${isLoading ? 'loading' : ''}`} 
+                  onClick={handleApiCall}
+                  disabled={isLoading}
                 >
-                  &times;
+                  {isLoading ? (
+                    <>
+                      <div className="button-spinner"></div>
+                      <span>Sending...</span>
+                    </>
+                  ) : 'Send'}
+                </button>
+              </div>
+              
+              <div className="try-it-tabs">
+                <button 
+                  className={`try-it-tab ${activeRequestTab === 'params' ? 'active' : ''}`}
+                  onClick={() => setActiveRequestTab('params')}
+                >
+                  Params
+                </button>
+                <button 
+                  className={`try-it-tab ${activeRequestTab === 'headers' ? 'active' : ''}`}
+                  onClick={() => setActiveRequestTab('headers')}
+                >
+                  Headers
+                </button>
+                {['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && (
+                  <button 
+                    className={`try-it-tab ${activeRequestTab === 'body' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('body')}
+                  >
+                    Body
+                  </button>
+                )}
+                <button 
+                  className={`try-it-tab ${activeRequestTab === 'auth' ? 'active' : ''}`}
+                  onClick={() => setActiveRequestTab('auth')}
+                >
+                  Authorization
                 </button>
               </div>
               
               <div className="try-it-modal-content">
-                <div className="try-it-section">
-                  <h3>Authentication</h3>
-                  <div className="try-it-form-group">
-                    <label htmlFor="api-key">API Key</label>
-                    <input
-                      type="text"
-                      id="api-key"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder="Enter your API key"
-                    />
+                {activeRequestTab === 'params' && (
+                  <div className="try-it-section">
+                    {currentEndpoint.url.includes('{employee_id}') && (
+                      <div className="path-params-section">
+                        <h3>Path Parameters</h3>
+                        <div className="try-it-form-group">
+                          <label htmlFor="employee-id">employee_id</label>
+                          <input
+                            type="text"
+                            id="employee-id"
+                            value={requestParams.employee_id || ''}
+                            onChange={(e) => updateRequestParam('employee_id', e.target.value)}
+                            placeholder="Enter employee ID (e.g. EMP001)"
+                          />
+                          <div className="param-description">Required path parameter for identifying the employee</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {currentEndpoint.queryParams.length > 0 && (
+                      <div className="query-params-section">
+                        <h3>Query Parameters</h3>
+                        {currentEndpoint.queryParams.map((param, index) => (
+                          <div className="try-it-form-group" key={index}>
+                            <div className="param-header">
+                              <label htmlFor={`param-${param.name}`}>
+                                {param.name}
+                              </label>
+                              {param.required && <span className="required-badge">required</span>}
+                            </div>
+                            <input
+                              type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
+                              id={`param-${param.name}`}
+                              value={requestParams[param.name] || ''}
+                              onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                              placeholder={param.example ? `Enter ${param.name} (${param.example.replace('Example: ', '')})` : `Enter ${param.name}`}
+                            />
+                            <div className="param-description">{param.description || `${param.type} - Optional query parameter`}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  
-                  {currentEndpoint.url.includes('{employee_id}') && (
+                )}
+                
+                {activeRequestTab === 'headers' && (
+                  <div className="try-it-section">
+                    <h3>HTTP Headers</h3>
+                    <div className="param-description">Headers are sent with every request to authenticate and provide additional context.</div>
+                    <div className="headers-table">
+                      <div className="headers-row header">
+                        <div className="header-key">Key</div>
+                        <div className="header-value">Value</div>
+                        <div className="header-actions"></div>
+                      </div>
+                      
+                      {Object.entries(requestHeaders).map(([key, value], index) => (
+                        <div className="headers-row" key={index}>
+                          <div className="header-key">
+                            <input 
+                              type="text" 
+                              value={key} 
+                              onChange={(e) => {
+                                const newKey = e.target.value;
+                                const headers = { ...requestHeaders };
+                                delete headers[key];
+                                headers[newKey] = value;
+                                setRequestHeaders(headers);
+                              }}
+                              placeholder="Header name"
+                            />
+                          </div>
+                          <div className="header-value">
+                            <input 
+                              type="text" 
+                              value={value} 
+                              onChange={(e) => addRequestHeader(key, e.target.value)}
+                              placeholder="Header value"
+                            />
+                          </div>
+                          <div className="header-actions">
+                            <button 
+                              className="remove-header-btn" 
+                              onClick={() => removeRequestHeader(key)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="add-header-row">
+                        <button 
+                          className="add-header-btn"
+                          onClick={() => addRequestHeader(`Header-${Object.keys(requestHeaders).length + 1}`, '')}
+                        >
+                          Add Header
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {activeRequestTab === 'body' && ['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && (
+                  <div className="try-it-section">
+                    <div className="body-type-selector">
+                      <button 
+                        className={`body-type-btn ${bodyType === 'form' ? 'active' : ''}`}
+                        onClick={() => setBodyType('form')}
+                      >
+                        Form
+                      </button>
+                      <button 
+                        className={`body-type-btn ${bodyType === 'raw' ? 'active' : ''}`}
+                        onClick={() => setBodyType('raw')}
+                      >
+                        Raw JSON
+                      </button>
+                    </div>
+                    
+                    {bodyType === 'form' && currentEndpoint.bodyParams && (
+                      <div className="form-body-section">
+                        <h3>Body Parameters</h3>
+                        <div className="param-description">These parameters will be sent in the request body as JSON.</div>
+                        {currentEndpoint.bodyParams.map((param, index) => (
+                          <div className="try-it-form-group" key={index}>
+                            <div className="param-header">
+                              <label htmlFor={`body-param-${param.name}`}>
+                                {param.name}
+                              </label>
+                              {param.required && <span className="required-badge">required</span>}
+                            </div>
+                            <input
+                              type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
+                              id={`body-param-${param.name}`}
+                              value={requestParams[param.name] || ''}
+                              onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                              placeholder={param.example ? `Enter ${param.name} (${param.example.replace('Example: ', '')})` : `Enter ${param.name}`}
+                            />
+                            <div className="param-description">{param.description || `${param.type}${param.required ? ' - Required parameter' : ' - Optional parameter'}`}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {bodyType === 'raw' && (
+                      <div className="raw-body-section">
+                        <div className="raw-body-header">
+                          <span>JSON</span>
+                        </div>
+                        <textarea
+                          className="raw-body-editor"
+                          value={rawBody}
+                          onChange={(e) => setRawBody(e.target.value)}
+                          placeholder="Enter raw JSON body"
+                          rows={10}
+                        />
+                        <div className="param-description">Enter a valid JSON object that matches the expected request body structure.</div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {activeRequestTab === 'auth' && (
+                  <div className="try-it-section">
+                    <h3>API Key Authentication</h3>
                     <div className="try-it-form-group">
-                      <label htmlFor="employee-id">Employee ID</label>
+                      <label htmlFor="api-key">API Key</label>
                       <input
                         type="text"
-                        id="employee-id"
-                        value={requestParams.employee_id || ''}
-                        onChange={(e) => updateRequestParam('employee_id', e.target.value)}
-                        placeholder="Employee ID"
+                        id="api-key"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="Enter your API key (required for all requests)"
                       />
+                      <div className="auth-description">
+                        <strong>Required for all API calls.</strong> The API key authenticates your requests and determines your access level. Add the API key as a header with the name 'X-API-KEY'.
+                      </div>
                     </div>
-                  )}
-                </div>
-                
-                {currentEndpoint.queryParams.length > 0 && (
-                  <div className="try-it-section">
-                    <h3>Query Parameters</h3>
-                    {currentEndpoint.queryParams.map((param, index) => (
-                      <div className="try-it-form-group" key={index}>
-                        <label htmlFor={`param-${param.name}`}>
-                          {param.name} {param.required && <span className="required-badge">required</span>}
-                        </label>
-                        <input
-                          type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
-                          id={`param-${param.name}`}
-                          value={requestParams[param.name] || ''}
-                          onChange={(e) => updateRequestParam(param.name, e.target.value)}
-                          placeholder={param.example || param.name}
-                        />
+                    <div className="environment-info">
+                      <h4>Current Environment: {activeEnvironment}</h4>
+                      <div className="environment-variables">
+                        <div className="environment-variable">
+                          <span className="env-var-name">Base URL:</span>
+                          <span className="env-var-value">{environments.find(e => e.name === activeEnvironment)?.variables.baseUrl || ''}</span>
+                        </div>
                       </div>
-                    ))}
+                      <button 
+                        className="change-environment-btn"
+                        onClick={toggleEnvironmentModal}
+                      >
+                        Change Environment
+                      </button>
+                    </div>
                   </div>
                 )}
                 
-                {currentEndpoint.bodyParams && currentEndpoint.bodyParams.length > 0 && (
-                  <div className="try-it-section">
-                    <h3>Body Parameters</h3>
-                    {currentEndpoint.bodyParams.map((param, index) => (
-                      <div className="try-it-form-group" key={index}>
-                        <label htmlFor={`body-param-${param.name}`}>
-                          {param.name} {param.required && <span className="required-badge">required</span>}
-                        </label>
-                        <input
-                          type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
-                          id={`body-param-${param.name}`}
-                          value={requestParams[param.name] || ''}
-                          onChange={(e) => updateRequestParam(param.name, e.target.value)}
-                          placeholder={param.example || param.name}
-                        />
+                {/* Response Section */}
+                {(apiResponse || apiError || isLoading) && (
+                  <div className="try-it-response-section">
+                    <div className="response-header">
+                      <h3>Response</h3>
+                      {responseDetails && (
+                        <div className="response-meta">
+                          <span className={`status-code ${responseDetails.status >= 200 && responseDetails.status < 300 ? 'success' : 'error'}`}>
+                            {responseDetails.status} {responseDetails.statusText}
+                          </span>
+                          <span className="response-time">{responseDetails.time} ms</span>
+                          <span className="response-size">{responseDetails.size}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {isLoading && (
+                      <div className="response-loading">
+                        <div className="loading-spinner"></div>
+                        <div>Fetching response...</div>
                       </div>
-                    ))}
-                  </div>
-                )}
-                
-                <div className="try-it-action">
-                  <button 
-                    className={`try-it-send-button ${isLoading ? 'loading' : ''}`} 
-                    onClick={handleApiCall}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Sending...' : 'Send Request'}
-                  </button>
-                </div>
-                
-                {apiError && (
-                  <div className="try-it-error">
-                    <h3>Error</h3>
-                    <div className="error-message">{apiError}</div>
-                  </div>
-                )}
-                
-                {apiResponse && (
-                  <div className="try-it-response">
-                    <h3>Response</h3>
-                    <pre className="response-body">
-                      {JSON.stringify(apiResponse, null, 2)}
-                    </pre>
+                    )}
+                    
+                    {apiError && !isLoading && (
+                      <div className="response-error">
+                        <h4>Error</h4>
+                        <div className="error-message">{apiError}</div>
+                      </div>
+                    )}
+                    
+                    {apiResponse && !isLoading && (
+                      <div className="response-body">
+                        <div className="response-body-header">
+                          <span>Response Body</span>
+                          <button 
+                            className={`copy-response-btn ${copiedCode ? 'copied' : ''}`}
+                            onClick={() => copyCodeToClipboard(JSON.stringify(apiResponse, null, 2))}
+                          >
+                            {copiedCode ? 'Copied!' : 'Copy'}
+                          </button>
+                        </div>
+                        <pre className="response-json">
+                          {JSON.stringify(apiResponse, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Environment Selection Modal */}
+        {showEnvironmentModal && (
+          <div className="environment-modal">
+            <div className="environment-modal-header">
+              <h3>Select Environment</h3>
+            </div>
+            <div className="environment-list">
+              {environments.map((env, index) => (
+                <div 
+                  key={index} 
+                  className={`environment-item ${activeEnvironment === env.name ? 'active' : ''}`}
+                  onClick={() => selectEnvironment(env.name)}
+                >
+                  {env.name}
+                </div>
+              ))}
+            </div>
+            <div className="environment-modal-footer">
+              <button 
+                className="close-env-modal-btn"
+                onClick={toggleEnvironmentModal}
+              >
+                Close
+              </button>
             </div>
           </div>
         )}
