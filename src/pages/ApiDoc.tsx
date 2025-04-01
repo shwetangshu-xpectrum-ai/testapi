@@ -148,7 +148,124 @@ interface EndpointsType {
   [key: string]: EndpointDataType;
 }
 
-const ApiDoc: React.FC = () => {
+// Add request body model interfaces after the existing interfaces
+interface EmployeeDataModel {
+  employee_id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone_number?: string;
+  hire_date?: string;
+  job_title?: string;
+  job_id?: number;
+  gov_id?: string;
+  hiring_manager_id?: string;
+  hr_manager_id?: string;
+  marital_status?: string;
+  state?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  sex?: string;
+  department?: string;
+  date_of_birth?: string;
+  status?: string;
+}
+
+interface EmployeeInsuranceDataModel {
+  employee_id: string;
+  plan_name?: string;
+  insurance_plan_id?: string;
+  enrollment_date?: string;
+  coverage_type?: string;
+  employee_contribution?: number;
+  enrollment_time?: string;
+}
+
+interface InsurancePlanModel {
+  plan_name: string;
+  plan_id?: string;
+  network?: string;
+  deductible_individual_family?: string;
+  out_of_pocket_maximum_individual_family?: string;
+  coinsurance?: string;
+  overall_lifetime_maximum?: string;
+  rates_premium_employee_only?: number;
+  rates_premium_employer_contribution_employee_only?: number;
+  rates_premium_employee_contribution_employee_only?: number;
+  rates_premium_employee_spouse?: number;
+  rates_premium_employer_contribution_employee_spouse?: number;
+  rates_premium_employee_contribution_employee_spouse?: number;
+  rates_premium_employee_children?: number;
+  rates_premium_employer_contribution_employee_children?: number;
+  rates_premium_employee_contribution_employee_children?: number;
+  rates_premium_family?: number;
+  rates_premium_employer_contribution_family?: number;
+  rates_premium_employee_contribution_family?: number;
+}
+
+interface LeaveBalanceDataModel {
+  employee_id: string;
+  annual_leave_balance?: number;
+  sick_leave_balance?: number;
+  personal_leave_balance?: number;
+  unpaid_leave_taken?: number;
+  leave_balance_updated_date?: string;
+}
+
+interface LeaveRequestsModel {
+  employee_id?: string;
+  application_id: number;
+  start_date?: string;
+  total_working_days_off?: number;
+  total_days_off?: number;
+  end_date?: string;
+  deduction_from_salary?: number;
+  leave_type?: string;
+  reason?: string;
+  request_date?: string;
+  request_time?: string;
+  reviewed_by?: string;
+  status?: string;
+  approved_by?: string;
+}
+
+interface PayrollModel {
+  employee_id: string;
+  base_salary?: number;
+  federal_tax?: number;
+  state_tax?: number;
+  total_tax?: number;
+  month?: string;
+  salary_received_day?: string;
+}
+
+interface SalaryInfoModel {
+  employee_id: string;
+  base_salary?: number;
+  salary_type?: string;
+  bonus?: number;
+  commission?: number;
+  currency?: string;
+  salary_grade?: string;
+  last_salary_increase_date?: string;
+}
+
+interface HarassmentReportsModel {
+  complaint_id?: number;
+  victim_employee_id?: number;
+  harasser_employee_id?: number;
+  harassment_level?: string;
+  description?: string;
+  status?: string;
+  review_body?: string;
+  incident_date?: string;
+  incident_time?: string;
+  reported_date?: string;
+  reported_time?: string;
+  level?: string;
+}
+
+const ApiDoc: React.FC = (): JSX.Element => {
   const [activeTab, setActiveTab] = useState('shell');
   const [responseOpen, setResponseOpen] = useState(true);
   const [openCategories, setOpenCategories] = useState<string[]>(['employee', 'salary', 'payroll', 'insurance', 'leave']);
@@ -1301,118 +1418,145 @@ const ApiDoc: React.FC = () => {
       });
   };
 
-  // Function to handle API calls - updated to handle real endpoint
-  const handleApiCall = () => {
-    // Set loading state immediately for better user feedback
-    setIsLoading(true);
+  // Add validation helper function
+  const validateEmployeeData = (data: any) => {
+    const requiredFields = ['employee_id'];
+    const missingFields = requiredFields.filter(field => !data[field]);
     
-    // Batch state resets for better performance
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+    
+    // Validate field types
+    if (data.job_id && typeof data.job_id !== 'number') {
+      throw new Error('job_id must be a number');
+    }
+    
+    return true;
+  };
+
+  // Single handleApiCall function with validation
+  const handleApiCall = () => {
+    setIsLoading(true);
     setApiError('');
     setResponseDetails(null);
     setApiResponse(null);
     
-    // Get API key from current environment
-    const env = environments.find(e => e.name === activeEnvironment);
-    const currentApiKey = apiKey || (env?.variables.apiKey || '');
-    
-    // Validate API key for private endpoints
-    if (!currentApiKey && currentEndpoint.headerParams.some(p => p.name === 'X-API-KEY' && p.required)) {
-      setApiError('API key is required for this endpoint');
-      setIsLoading(false);
-      return;
-    }
-    
-    if (apiBaseUrl) {
+    try {
+      // Validate request body for POST/PUT methods
+      if (['POST', 'PUT'].includes(currentEndpoint.method)) {
+        const bodyData = bodyType === 'raw' ? JSON.parse(rawBody) : requestParams;
+        
+        if (currentEndpoint.url.includes('employee_data')) {
+          validateEmployeeData(bodyData);
+        }
+      }
+      
+      if (!apiBaseUrl) {
+        setApiError('API base URL is required');
+        setIsLoading(false);
+        return;
+      }
+      
       setIsResponseFromApi(true);
       const startTime = performance.now();
       
-      // Get the current endpoint data
-      const currentEndpointData = endpointData[activeEndpoint];
+      let apiUrl = `${apiBaseUrl}`;
       
-      // Use the custom URL if it was edited, otherwise construct it
-      let apiUrl = editableUrl || `${apiBaseUrl}`;
+      // Map the endpoint to the correct API path
+      if (activeEndpoint === 'getAllEmployees') {
+        apiUrl = `${apiBaseUrl}/all_employee_data`;
+      } else if (activeEndpoint.includes('Employee')) {
+        apiUrl += '/employee_data';
+      } else if (activeEndpoint.includes('Salary')) {
+        apiUrl += '/salary_info';
+      } else if (activeEndpoint.includes('Payroll')) {
+        apiUrl += '/payroll';
+      } else if (activeEndpoint.includes('Insurance')) {
+        apiUrl += '/employee_insurance_data';
+      } else if (activeEndpoint.includes('LeaveBalance')) {
+        apiUrl += '/leave_balance_data';
+      } else if (activeEndpoint.includes('LeaveRequest')) {
+        apiUrl += '/leave_requests';
+      }
       
-      // Only construct the URL if no custom URL is provided
-      if (!editableUrl) {
-        // Map the endpoint to the correct API path
-        if (activeEndpoint === 'getAllEmployees') {
-          apiUrl = `${apiBaseUrl}/all_employee_data`;
-        } else if (activeEndpoint.includes('Employee') && !activeEndpoint.includes('Insurance')) {
-          apiUrl += '/employee_data';
-        } else if (activeEndpoint.includes('Salary')) {
-          apiUrl += '/salary_info';
-        } else if (activeEndpoint.includes('Payroll')) {
-          apiUrl += '/payroll';
-        } else if (activeEndpoint.includes('InsurancePlan')) {
-          apiUrl += '/insurance_plan';
-        } else if (activeEndpoint.includes('Insurance') || activeEndpoint.includes('insurance')) {
-          apiUrl += '/employee_insurance_data';
-        } else if (activeEndpoint.includes('LeaveBalance')) {
-          apiUrl += '/leave_balance_data';
-        } else if (activeEndpoint.includes('LeaveRequest')) {
-          apiUrl += '/leave_requests';
-        }
-        
-        // Handle path parameters like {employee_id} or {application_id}
-        if (currentEndpointData.url.includes('{employee_id}')) {
-          apiUrl += `/${requestParams.employee_id || ''}`;
-        } else if (currentEndpointData.url.includes('{plan_name}')) {
-          const planName = requestParams.plan_name || 'Premium Health Plan';
-          apiUrl += `/${encodeURIComponent(planName)}`;
-        } else if (currentEndpointData.url.includes('{application_id}')) {
-          apiUrl += `/${requestParams.application_id || ''}`;
-        }
-        
-        // Add query parameters if any exist for this endpoint
-        const queryParams = new URLSearchParams();
-        
-        // Always add API key
-        queryParams.append('api_key', 'xpectrum_api_key_123@ai');
-        
-        if (currentEndpointData.queryParams && currentEndpointData.queryParams.length > 0) {
-          currentEndpointData.queryParams.forEach(param => {
-            if (requestParams[param.name] && param.name !== 'api_key') {
-              queryParams.append(param.name, requestParams[param.name]);
-            }
-          });
-        }
-        
-        const queryString = queryParams.toString();
+      // Handle path parameters
+      if (currentEndpoint.url.includes('{employee_id}')) {
+        apiUrl += `/${requestParams.employee_id || realEmployeeId}`;
+      }
+      
+      // Add query parameters
+      const queryParams = new URLSearchParams();
+      queryParams.append('api_key', 'xpectrum_api_key_123@ai');
+      
+      if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+        currentEndpoint.queryParams.forEach(param => {
+          if (requestParams[param.name] && param.name !== 'api_key') {
+            queryParams.append(param.name, requestParams[param.name]);
+          }
+        });
+      }
+      
+      const queryString = queryParams.toString();
+      if (queryString) {
         apiUrl += `?${queryString}`;
       }
       
-      // Prepare request options based on HTTP method
+      // Prepare request options
       const options: RequestInit = {
-        method: currentEndpointData.method,
+        method: currentEndpoint.method,
         headers: {
           'Content-Type': 'application/json',
-          'X-API-KEY': currentApiKey
+          'X-API-KEY': apiKey || (environments.find(e => e.name === activeEnvironment)?.variables.apiKey || ''),
+          ...requestHeaders
         }
       };
       
-      // Add body for POST, PUT, PATCH methods
-      if (['POST', 'PUT', 'PATCH'].includes(currentEndpointData.method) && currentEndpointData.bodyParams) {
-        const bodyData: {[key: string]: any} = {};
-        
-        currentEndpointData.bodyParams.forEach(param => {
-          if (requestParams[param.name]) {
-            // Convert numbers to number type
-            if (param.type === 'number') {
-              bodyData[param.name] = Number(requestParams[param.name]);
-            } else {
-              bodyData[param.name] = requestParams[param.name];
-            }
+      // Handle request body for POST and PUT methods
+      if (['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method)) {
+        if (bodyType === 'raw' && rawBody) {
+          try {
+            // Parse and validate the raw JSON body
+            const parsedBody = JSON.parse(rawBody);
+            options.body = JSON.stringify(parsedBody);
+          } catch (error) {
+            throw new Error('Invalid JSON in request body');
           }
-        });
-        
-        options.body = JSON.stringify(bodyData);
+        } else {
+          // Use form data if not using raw JSON
+          const bodyData: {[key: string]: any} = {};
+          if (currentEndpoint.bodyParams) {
+            currentEndpoint.bodyParams.forEach(param => {
+              if (requestParams[param.name]) {
+                if (param.type === 'number' || param.type === 'integer') {
+                  bodyData[param.name] = Number(requestParams[param.name]);
+                } else if (param.type === 'boolean') {
+                  bodyData[param.name] = requestParams[param.name] === 'true';
+                } else {
+                  bodyData[param.name] = requestParams[param.name];
+                }
+              }
+            });
+          }
+          options.body = JSON.stringify(bodyData);
+        }
       }
       
-      console.log(`Making ${currentEndpointData.method} request to: ${apiUrl}`);
+      console.log(`Making ${currentEndpoint.method} request to: ${apiUrl}`);
+      console.log('Request options:', options);
       
       // Make the API call
       fetch(apiUrl, options)
         .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('Response is not JSON');
+          }
+          
           return {
             response,
             status: response.status,
@@ -1429,13 +1573,11 @@ const ApiDoc: React.FC = () => {
           }));
         })
         .then(({data, status, statusText, time}) => {
-          // Calculate response size
           const responseSize = JSON.stringify(data).length;
           const formattedSize = responseSize < 1024 
             ? `${responseSize} B` 
             : `${(responseSize / 1024).toFixed(2)} KB`;
           
-          // Set response details
           setResponseDetails({
             status,
             statusText,
@@ -1444,7 +1586,6 @@ const ApiDoc: React.FC = () => {
             headers: {}
           });
           
-          // Set the response
           setApiResponse(data);
           setIsLoading(false);
         })
@@ -1463,128 +1604,10 @@ const ApiDoc: React.FC = () => {
           setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
           setIsLoading(false);
         });
-    } else {
-      // Original mock API call logic
-      setIsResponseFromApi(false);
-      
-      if (!apiKey && currentEndpoint.headerParams.some(p => p.name === 'X-API-KEY' && p.required)) {
-        setApiError('API key is required');
-        setIsLoading(false);
-        return;
-      }
-      
-      const startTime = performance.now();
-
-      try {
-        // Simulate API call with mock data
-        // ... existing mock API call code ...
-
-        // Prepare the API URL with path parameters
-        let apiUrl = currentEndpoint.url;
-        if (apiUrl.includes('{employee_id}') && requestParams.employee_id) {
-          apiUrl = apiUrl.replace('{employee_id}', requestParams.employee_id);
-        }
-
-        // Add query parameters
-        if (currentEndpoint.queryParams.length > 0) {
-          const queryParams = new URLSearchParams();
-          
-          // Always add API key
-          queryParams.append('api_key', 'xpectrum_api_key_123@ai');
-          
-          currentEndpoint.queryParams.forEach(param => {
-            if (requestParams[param.name] && param.name !== 'api_key') {
-              queryParams.append(param.name, requestParams[param.name]);
-            }
-          });
-          
-          const queryString = queryParams.toString();
-          apiUrl += `?${queryString}`;
-        } else {
-          // If no query params defined, still add the API key
-          apiUrl += '?api_key=xpectrum_api_key_123@ai';
-        }
-
-        // Create headers for the request
-        const headers: {[key: string]: string} = {
-          ...requestHeaders,
-          'X-API-KEY': apiKey,
-        };
-
-        // Prepare request options
-        const options: RequestInit = {
-          method: currentEndpoint.method,
-          headers
-        };
-
-        // Add body for POST, PUT methods
-        if (['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method)) {
-          if (bodyType === 'raw' && rawBody) {
-            options.body = rawBody;
-          } else {
-            const bodyData: {[key: string]: any} = {};
-            
-            if (currentEndpoint.bodyParams) {
-              currentEndpoint.bodyParams.forEach(param => {
-                if (requestParams[param.name]) {
-                  // Convert numbers to number type
-                  if (param.type === 'number' || param.type === 'integer') {
-                    bodyData[param.name] = Number(requestParams[param.name]);
-                  } else {
-                    bodyData[param.name] = requestParams[param.name];
-                  }
-                }
-              });
-            }
-            
-            options.body = JSON.stringify(bodyData);
-          }
-        }
-
-        // Display request details in console for debugging
-        console.log('Request URL:', apiUrl);
-        console.log('Request Options:', options);
-
-        // For mock calls, reduce the timeout for faster responses
-        setTimeout(() => {
-          const mockResponse = JSON.parse(JSON.stringify(
-            currentEndpoint.response.example
-          ));
-          
-          const endTime = performance.now();
-          
-          // Calculate response size
-          const responseSize = JSON.stringify(mockResponse).length;
-          const formattedSize = responseSize < 1024 
-            ? `${responseSize} B` 
-            : `${(responseSize / 1024).toFixed(2)} KB`;
-
-          // Set response details
-          setResponseDetails({
-            status: 200,
-            statusText: 'OK',
-            time: endTime - startTime,
-            size: formattedSize
-          });
-
-          // Set the response
-          setApiResponse(mockResponse);
-          setIsLoading(false);
-        }, 300); // Reduced from 1000ms to 300ms for faster feedback
-      } catch (error) {
-        console.error('API call error:', error);
-        const endTime = performance.now();
-        
-        setResponseDetails({
-          status: 0,
-          statusText: 'Failed',
-          time: endTime - startTime,
-          size: '0 B'
-        });
-        
-        setApiError(error instanceof Error ? error.message : 'An error occurred during the API call');
-        setIsLoading(false);
-      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      setApiError(error instanceof Error ? error.message : 'Invalid request data');
+      setIsLoading(false);
     }
   };
 
@@ -2823,7 +2846,7 @@ print(data)`;
                   </div>
                 </div>
 
-                <div className="request-tabs" style={{ display: 'none' }}>
+                <div className="request-tabs">
                   <div
                     className={`request-tab ${activeRequestTab === 'params' ? 'active' : ''}`}
                     onClick={() => setActiveRequestTab('params')}
@@ -2851,6 +2874,111 @@ print(data)`;
                     <span>Authorization</span>
                   </div>
                 </div>
+
+                {/* Add styles for the request tabs */}
+                <style>
+                {`
+                  .request-tabs {
+                    display: flex;
+                    gap: 2px;
+                    margin-bottom: 16px;
+                    border-bottom: 1px solid var(--border-color);
+                    background: var(--background-secondary);
+                    padding: 4px;
+                    border-radius: 4px;
+                  }
+
+                  .request-tab {
+                    padding: 8px 16px;
+                    cursor: pointer;
+                    border-radius: 4px;
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                    transition: all 0.2s ease;
+                  }
+
+                  .request-tab:hover {
+                    background: var(--background-tertiary);
+                    color: var(--text-primary);
+                  }
+
+                  .request-tab.active {
+                    background: var(--accent-color);
+                    color: white;
+                  }
+
+                  .try-it-section {
+                    padding: 16px;
+                    background: var(--background-primary);
+                    border-radius: 4px;
+                    margin-bottom: 16px;
+                  }
+
+                  .body-type-selector {
+                    display: flex;
+                    gap: 8px;
+                    margin-bottom: 16px;
+                  }
+
+                  .body-type-btn {
+                    padding: 6px 12px;
+                    border: 1px solid var(--border-color);
+                    background: var(--background-secondary);
+                    color: var(--text-primary);
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                  }
+
+                  .body-type-btn.active {
+                    background: var(--accent-color);
+                    color: white;
+                    border-color: var(--accent-color);
+                  }
+
+                  .raw-body-section {
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                    overflow: hidden;
+                  }
+
+                  .raw-body-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 12px;
+                    background: var(--background-secondary);
+                    border-bottom: 1px solid var(--border-color);
+                  }
+
+                  .format-json-btn {
+                    padding: 4px 8px;
+                    background: var(--accent-color);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                  }
+
+                  .raw-body-editor {
+                    width: 100%;
+                    min-height: 300px;
+                    padding: 12px;
+                    background: var(--background-primary);
+                    color: var(--text-primary);
+                    border: none;
+                    font-family: monospace;
+                    font-size: 0.9rem;
+                    line-height: 1.5;
+                    resize: vertical;
+                  }
+
+                  .raw-body-editor:focus {
+                    outline: none;
+                  }
+                `}
+                </style>
 
                 {activeRequestTab === 'params' && (
                   <div className="request-tab-content">
@@ -3061,6 +3189,7 @@ print(data)`;
                 
                 {activeRequestTab === 'body' && ['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && (
                   <div className="try-it-section">
+                    <h3>Request Body</h3>
                     <div className="body-type-selector">
                       <button 
                         className={`body-type-btn ${bodyType === 'form' ? 'active' : ''}`}
@@ -3072,48 +3201,178 @@ print(data)`;
                         className={`body-type-btn ${bodyType === 'raw' ? 'active' : ''}`}
                         onClick={() => setBodyType('raw')}
                       >
-                        Raw JSON
+                        Raw
                       </button>
                     </div>
-                    
-                    {bodyType === 'form' && currentEndpoint.bodyParams && (
-                      <div className="form-body-section">
-                        <h3>Body Parameters</h3>
-                        <div className="param-description">These parameters will be sent in the request body as JSON.</div>
-                        {currentEndpoint.bodyParams.map((param, index) => (
-                          <div className="try-it-form-group" key={index}>
-                            <div className="param-header">
-                              <label htmlFor={`body-param-${param.name}`}>
-                                {param.name}
-                              </label>
-                              {param.required && <span className="required-badge">required</span>}
-                            </div>
-                            <input
-                              type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
-                              id={`body-param-${param.name}`}
-                              value={requestParams[param.name] || ''}
-                              onChange={(e) => updateRequestParam(param.name, e.target.value)}
-                              placeholder={param.example ? `Enter ${param.name} (${param.example.replace('Example: ', '')})` : `Enter ${param.name}`}
-                            />
-                            <div className="param-description">{param.description || `${param.type}${param.required ? ' - Required parameter' : ' - Optional parameter'}`}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                     
                     {bodyType === 'raw' && (
                       <div className="raw-body-section">
                         <div className="raw-body-header">
-                          <span>JSON</span>
+                          <div className="content-type-selector">
+                            <select 
+                              value="application/json" 
+                              onChange={() => {}}
+                              className="content-type-select"
+                            >
+                              <option value="application/json">JSON</option>
+                            </select>
+                          </div>
+                          <button 
+                            className="format-json-btn"
+                            onClick={() => {
+                              try {
+                                // Get the appropriate model based on the endpoint
+                                let modelExample: any = {};
+                                if (currentEndpoint.url.includes('employee_data')) {
+                                  modelExample = {
+                                    employee_id: "EMP001",
+                                    first_name: "John",
+                                    last_name: "Smith",
+                                    email: "john.smith@example.com",
+                                    phone_number: "+1 123-456-7890",
+                                    hire_date: "2023-01-01",
+                                    job_title: "Software Engineer",
+                                    job_id: 1,
+                                    gov_id: "123-45-6789",
+                                    hiring_manager_id: "EMP002",
+                                    hr_manager_id: "EMP003",
+                                    marital_status: "single",
+                                    state: "CA",
+                                    emergency_contact_name: "Jane Doe",
+                                    emergency_contact_phone: "+1 987-654-3210",
+                                    sex: "M",
+                                    department: "Engineering",
+                                    date_of_birth: "1990-01-01",
+                                    status: "active"
+                                  };
+                                } else if (currentEndpoint.url.includes('insurance_data')) {
+                                  modelExample = {
+                                    employee_id: "EMP001",
+                                    plan_name: "Premium Health Plan",
+                                    insurance_plan_id: "INS001",
+                                    enrollment_date: "2023-01-01",
+                                    coverage_type: "family",
+                                    employee_contribution: 250.00,
+                                    enrollment_time: "09:00:00"
+                                  };
+                                } else if (currentEndpoint.url.includes('insurance_plan')) {
+                                  modelExample = {
+                                    plan_name: "Premium Health Plan",
+                                    plan_id: "INS001",
+                                    network: "Nationwide",
+                                    deductible_individual_family: "$500/$1000",
+                                    out_of_pocket_maximum_individual_family: "$3000/$6000",
+                                    coinsurance: "80/20",
+                                    overall_lifetime_maximum: "Unlimited",
+                                    rates_premium_employee_only: 500.00,
+                                    rates_premium_employer_contribution_employee_only: 400.00,
+                                    rates_premium_employee_contribution_employee_only: 100.00,
+                                    rates_premium_employee_spouse: 800.00,
+                                    rates_premium_employer_contribution_employee_spouse: 600.00,
+                                    rates_premium_employee_contribution_employee_spouse: 200.00,
+                                    rates_premium_employee_children: 750.00,
+                                    rates_premium_employer_contribution_employee_children: 550.00,
+                                    rates_premium_employee_contribution_employee_children: 200.00,
+                                    rates_premium_family: 1200.00,
+                                    rates_premium_employer_contribution_family: 950.00,
+                                    rates_premium_employee_contribution_family: 250.00
+                                  };
+                                } else if (currentEndpoint.url.includes('leave_balance')) {
+                                  modelExample = {
+                                    employee_id: "EMP001",
+                                    annual_leave_balance: 20,
+                                    sick_leave_balance: 10,
+                                    personal_leave_balance: 5,
+                                    unpaid_leave_taken: 0,
+                                    leave_balance_updated_date: "2023-01-01"
+                                  };
+                                } else if (currentEndpoint.url.includes('leave_requests')) {
+                                  modelExample = {
+                                    employee_id: "EMP001",
+                                    application_id: 1,
+                                    start_date: "2023-07-01",
+                                    total_working_days_off: 5,
+                                    total_days_off: 7,
+                                    end_date: "2023-07-07",
+                                    deduction_from_salary: 0,
+                                    leave_type: "annual",
+                                    reason: "Vacation",
+                                    request_date: "2023-06-01",
+                                    request_time: "09:00:00",
+                                    reviewed_by: "EMP002",
+                                    status: "pending",
+                                    approved_by: null
+                                  };
+                                } else if (currentEndpoint.url.includes('payroll')) {
+                                  modelExample = {
+                                    employee_id: "EMP001",
+                                    base_salary: 5000.00,
+                                    federal_tax: 1000.00,
+                                    state_tax: 500.00,
+                                    total_tax: 1500.00,
+                                    month: "2023-07",
+                                    salary_received_day: "2023-07-01"
+                                  };
+                                } else if (currentEndpoint.url.includes('salary_info')) {
+                                  modelExample = {
+                                    employee_id: "EMP001",
+                                    base_salary: 60000.00,
+                                    salary_type: "annual",
+                                    bonus: 5000.00,
+                                    commission: 2000.00,
+                                    currency: "USD",
+                                    salary_grade: "L3",
+                                    last_salary_increase_date: "2023-01-01"
+                                  };
+                                }
+                                
+                                setRawBody(JSON.stringify(modelExample, null, 2));
+                              } catch (error) {
+                                console.error('Error formatting JSON:', error);
+                              }
+                            }}
+                          >
+                            Format with Model
+                          </button>
                         </div>
-                        <textarea
-                          className="raw-body-editor"
-                          value={rawBody}
-                          onChange={(e) => setRawBody(e.target.value)}
-                          placeholder="Enter raw JSON body"
-                          rows={10}
-                        />
-                        <div className="param-description">Enter a valid JSON object that matches the expected request body structure.</div>
+                        <div className="editor-container">
+                          <textarea
+                            className="raw-body-editor"
+                            value={rawBody}
+                            onChange={(e) => setRawBody(e.target.value)}
+                            placeholder={`Enter request body as JSON\n\nExample:\n{\n  "key": "value"\n}`}
+                            rows={15}
+                            spellCheck={false}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {bodyType === 'form' && currentEndpoint.bodyParams && (
+                      <div className="form-body-section">
+                        <div className="form-body-fields">
+                          {currentEndpoint.bodyParams.map((param, index) => (
+                            <div className="form-field" key={index}>
+                              <label className="form-field-label">
+                                {param.name}
+                                {(param.required || param.name === 'employee_id') && (
+                                  <span className="required-badge">required</span>
+                                )}
+                              </label>
+                              <input
+                                type={param.type === 'number' || param.type === 'integer' ? 'number' : 'text'}
+                                className="form-field-input"
+                                value={requestParams[param.name] || ''}
+                                onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                                placeholder={param.example ? param.example.replace('Example: ', '') : `Enter ${param.name}`}
+                                required={param.required || param.name === 'employee_id'}
+                              />
+                              <div className="form-field-description">
+                                {param.description || `${param.type}${param.required || param.name === 'employee_id' ? ' - Required' : ' - Optional'}`}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -3571,6 +3830,201 @@ print(data)`;
            padding: 2px 8px;
            font-size: 0.8rem;
            cursor: pointer;
+         }
+         
+         .raw-body-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           padding: 8px 12px;
+           background-color: var(--background-secondary);
+           border-top-left-radius: 4px;
+           border-top-right-radius: 4px;
+         }
+         
+         .format-json-btn {
+           background-color: var(--accent-color);
+           color: white;
+           border: none;
+           border-radius: 4px;
+           padding: 4px 8px;
+           font-size: 0.8rem;
+           cursor: pointer;
+         }
+         
+         .format-json-btn:hover {
+           background-color: var(--accent-color-hover);
+         }
+         
+         .raw-body-editor {
+           width: 100%;
+           min-height: 300px;
+           padding: 12px;
+           font-family: monospace;
+           font-size: 0.9rem;
+           line-height: 1.4;
+           background-color: var(--background-primary);
+           color: var(--text-primary);
+           border: 1px solid var(--border-color);
+           border-top: none;
+           resize: vertical;
+         }
+         
+         .raw-body-editor:focus {
+           outline: none;
+           border-color: var(--accent-color);
+         }
+
+         .try-it-section {
+           padding: 20px;
+           background: var(--background-primary);
+           border-radius: 8px;
+           margin-bottom: 20px;
+         }
+
+         .body-type-selector {
+           display: flex;
+           gap: 8px;
+           margin-bottom: 16px;
+         }
+
+         .body-type-btn {
+           padding: 8px 16px;
+           border: 1px solid var(--border-color);
+           background: var(--background-secondary);
+           color: var(--text-primary);
+           border-radius: 4px;
+           cursor: pointer;
+           font-size: 0.9rem;
+           transition: all 0.2s ease;
+         }
+
+         .body-type-btn.active {
+           background: var(--accent-color);
+           color: white;
+           border-color: var(--accent-color);
+         }
+
+         .raw-body-section {
+           border: 1px solid var(--border-color);
+           border-radius: 4px;
+           overflow: hidden;
+         }
+
+         .raw-body-header {
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           padding: 8px 12px;
+           background: var(--background-secondary);
+           border-bottom: 1px solid var(--border-color);
+         }
+
+         .content-type-selector {
+           display: flex;
+           align-items: center;
+         }
+
+         .content-type-select {
+           padding: 4px 8px;
+           background: var(--background-primary);
+           color: var(--text-primary);
+           border: 1px solid var(--border-color);
+           border-radius: 4px;
+           font-size: 0.9rem;
+         }
+
+         .format-json-btn {
+           padding: 4px 8px;
+           background: var(--accent-color);
+           color: white;
+           border: none;
+           border-radius: 4px;
+           font-size: 0.8rem;
+           cursor: pointer;
+           transition: background 0.2s ease;
+         }
+
+         .format-json-btn:hover {
+           background: var(--accent-color-hover);
+         }
+
+         .editor-container {
+           position: relative;
+           background: var(--background-primary);
+         }
+
+         .raw-body-editor {
+           width: 100%;
+           min-height: 300px;
+           padding: 12px;
+           background: var(--background-primary);
+           color: var(--text-primary);
+           border: none;
+           font-family: monospace;
+           font-size: 0.9rem;
+           line-height: 1.5;
+           resize: vertical;
+           tab-size: 2;
+         }
+
+         .raw-body-editor:focus {
+           outline: none;
+         }
+
+         .form-body-section {
+           padding: 16px;
+           border: 1px solid var(--border-color);
+           border-radius: 4px;
+         }
+
+         .form-body-fields {
+           display: flex;
+           flex-direction: column;
+           gap: 16px;
+         }
+
+         .form-field {
+           display: flex;
+           flex-direction: column;
+           gap: 4px;
+         }
+
+         .form-field-label {
+           display: flex;
+           align-items: center;
+           gap: 8px;
+           font-weight: 500;
+           color: var(--text-primary);
+         }
+
+         .required-badge {
+           font-size: 0.7rem;
+           padding: 2px 6px;
+           background: var(--accent-color);
+           color: white;
+           border-radius: 4px;
+           font-weight: normal;
+         }
+
+         .form-field-input {
+           padding: 8px 12px;
+           background: var(--background-primary);
+           border: 1px solid var(--border-color);
+           border-radius: 4px;
+           color: var(--text-primary);
+           font-size: 0.9rem;
+           width: 100%;
+         }
+
+         .form-field-input:focus {
+           outline: none;
+           border-color: var(--accent-color);
+         }
+
+         .form-field-description {
+           font-size: 0.8rem;
+           color: var(--text-secondary);
          }
         `}
       </style>
