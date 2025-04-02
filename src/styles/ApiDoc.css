@@ -4000,20 +4000,79 @@
 
 .response-example-property {
   color: var(--property-color);
+  background-color: rgba(75, 156, 255, 0.1);
+  border: 1px solid rgba(75, 156, 255, 0.3);
+  padding: 0 3px;
+  border-radius: 3px;
 }
 
 .response-example-string {
-  color: var(--string-color);
+  color: var(--string-color, #4ed28c);
+  background-color: rgba(78, 210, 140, 0.1);
+  border: 1px solid rgba(78, 210, 140, 0.3);
+  padding: 0 3px;
+  border-radius: 3px;
 }
 
 .response-example-number {
-  color: var(--number-color);
+  color: var(--number-color, #00a6ff);
+  background-color: rgba(0, 166, 255, 0.1);
+  border: 1px solid rgba(0, 166, 255, 0.3);
+  padding: 0 3px;
+  border-radius: 3px;
 }
 
 .response-example-boolean {
-  color: var(--boolean-color);
+  color: var(--boolean-color, #f58b00);
+  background-color: rgba(245, 139, 0, 0.1);
+  border: 1px solid rgba(245, 139, 0, 0.3);
+  padding: 0 3px;
+  border-radius: 3px;
 }
 
 .response-example-null {
-  color: var(--null-color);
+  color: var(--null-color, #8e69ff);
+  background-color: rgba(142, 105, 255, 0.1);
+  border: 1px solid rgba(142, 105, 255, 0.3);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+/* Selected state styles */
+.response-example-property.selected,
+.response-example-string.selected,
+.response-example-number.selected,
+.response-example-boolean.selected,
+.response-example-null.selected {
+  background-color: rgba(180, 180, 180, 0.25);
+  border-width: 2px;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark theme selected state */
+.dark-theme .response-example-property.selected,
+.dark-theme .response-example-string.selected,
+.dark-theme .response-example-number.selected,
+.dark-theme .response-example-boolean.selected,
+.dark-theme .response-example-null.selected {
+  background-color: rgba(70, 70, 70, 0.6);
+}
+
+/* Light theme selected state */
+.light-theme .response-example-property.selected,
+.light-theme .response-example-string.selected,
+.light-theme .response-example-number.selected,
+.light-theme .response-example-boolean.selected,
+.light-theme .response-example-null.selected {
+  background-color: rgba(220, 220, 220, 0.6);
+}
+
+/* Hover effect */
+.response-example-property:hover,
+.response-example-string:hover,
+.response-example-number:hover,
+.response-example-boolean:hover,
+.response-example-null:hover {
+  border-width: 2px;
+  cursor: pointer;
 }

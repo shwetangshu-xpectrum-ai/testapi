@@ -1632,6 +1632,114 @@ const ApiDoc: React.FC = (): JSX.Element => {
     }
   };
 
+  // Generate a JSON template based on the current endpoint
+  const generateJsonTemplate = () => {
+    if (!currentEndpoint.bodyParams || currentEndpoint.bodyParams.length === 0) {
+      return '{}';
+    }
+    
+    let templateJson: {[key: string]: any} = {};
+    
+    // Include all fields for POST and PUT requests to make template complete
+    const shouldIncludeAllFields = currentEndpoint.method === 'PUT' || currentEndpoint.method === 'POST';
+    
+    // For employee-related endpoints
+    if (activeEndpoint.toLowerCase().includes('employee') && !activeEndpoint.toLowerCase().includes('insurance') && !activeEndpoint.toLowerCase().includes('leave')) {
+      const employeeFields: (keyof EmployeeDataModel)[] = [
+        'employee_id', 'first_name', 'last_name', 'email', 'phone_number', 'hire_date', 
+        'job_title', 'job_id', 'gov_id', 'hiring_manager_id', 'hr_manager_id', 
+        'marital_status', 'state', 'emergency_contact_name', 'emergency_contact_phone',
+        'sex', 'department', 'date_of_birth', 'status'
+      ];
+      
+      employeeFields.forEach(field => {
+        // Include field if it's in bodyParams or if it's a PUT request (to show all possible fields)
+        if (shouldIncludeAllFields || currentEndpoint.bodyParams?.some(param => param.name === field)) {
+          if (field === 'job_id') {
+            templateJson[field] = 0;
+          } else {
+            templateJson[field] = "";
+          }
+        }
+      });
+    } else if (activeEndpoint.toLowerCase().includes('salary')) {
+      // For salary-related endpoints
+      const salaryFields: (keyof SalaryInfoModel)[] = [
+        'employee_id', 'base_salary', 'salary_type', 'bonus', 'commission',
+        'currency', 'salary_grade', 'last_salary_increase_date'
+      ];
+      
+      salaryFields.forEach(field => {
+        if (shouldIncludeAllFields || currentEndpoint.bodyParams?.some(param => param.name === field)) {
+          if (field === 'base_salary' || field === 'bonus' || field === 'commission') {
+            templateJson[field] = 0;
+          } else {
+            templateJson[field] = "";
+          }
+        }
+      });
+    } else if (activeEndpoint.toLowerCase().includes('insurance')) {
+      // For insurance-related endpoints
+      const insuranceFields: (keyof InsurancePlanModel)[] = [
+        'plan_name', 'plan_id', 'network', 'deductible_individual_family',
+        'out_of_pocket_maximum_individual_family', 'coinsurance', 'overall_lifetime_maximum',
+        'rates_premium_employee_only', 'rates_premium_employer_contribution_employee_only',
+        'rates_premium_employee_contribution_employee_only', 'rates_premium_employee_spouse',
+        'rates_premium_employer_contribution_employee_spouse', 'rates_premium_employee_contribution_employee_spouse',
+        'rates_premium_employee_children', 'rates_premium_employer_contribution_employee_children',
+        'rates_premium_employee_contribution_employee_children', 'rates_premium_family',
+        'rates_premium_employer_contribution_family', 'rates_premium_employee_contribution_family'
+      ];
+      
+      insuranceFields.forEach(field => {
+        if (shouldIncludeAllFields || currentEndpoint.bodyParams?.some(param => param.name === field)) {
+          if (field.includes('premium') || field.includes('contribution')) {
+            templateJson[field] = 0;
+          } else {
+            templateJson[field] = "";
+          }
+        }
+      });
+    } else if (activeEndpoint.toLowerCase().includes('leave')) {
+      // For leave-related endpoints
+      const leaveFields: (keyof LeaveRequestsModel)[] = [
+        'employee_id', 'application_id', 'start_date', 'total_working_days_off',
+        'total_days_off', 'end_date', 'deduction_from_salary', 'leave_type',
+        'reason', 'request_date', 'request_time', 'reviewed_by', 'status', 'approved_by'
+      ];
+      
+      leaveFields.forEach(field => {
+        if (shouldIncludeAllFields || currentEndpoint.bodyParams?.some(param => param.name === field)) {
+          if (field.includes('days_off') || field.includes('deduction') || field === 'application_id') {
+            templateJson[field] = 0;
+          } else {
+            templateJson[field] = "";
+          }
+        }
+      });
+    }
+    
+    // If the template is empty (no model matched), use all bodyParams
+    if (Object.keys(templateJson).length === 0) {
+      currentEndpoint.bodyParams.forEach(param => {
+        if (param.type === 'number' || param.type === 'integer') {
+          templateJson[param.name] = 0;
+        } else if (param.type === 'boolean') {
+          templateJson[param.name] = false;
+        } else if (param.type === 'array') {
+          templateJson[param.name] = [];
+        } else if (param.type === 'object') {
+          templateJson[param.name] = {};
+        } else {
+          templateJson[param.name] = "";
+        }
+      });
+    }
+    
+    console.log('Generated template for endpoint:', activeEndpoint, templateJson);
+    return JSON.stringify(templateJson, null, 2);
+  };
+
   // Initialize request params with example values
   const initializeRequestParams = () => {
     const params: {[key: string]: string} = {};
@@ -1658,14 +1766,9 @@ const ApiDoc: React.FC = (): JSX.Element => {
         }
       });
       
-      // Set raw body JSON
-      const bodyObject = Object.fromEntries(
-        currentEndpoint.bodyParams.map(param => [
-          param.name,
-          param.example ? param.example.replace('Example: ', '') : ''
-        ])
-      );
-      setRawBody(JSON.stringify(bodyObject, null, 2));
+      // Set raw body JSON with template
+      const templateJson = generateJsonTemplate();
+      setRawBody(templateJson);
     }
     
     setRequestParams(params);
@@ -1694,8 +1797,21 @@ const ApiDoc: React.FC = (): JSX.Element => {
     setApiResponse(null);
     setApiError('');
     setResponseDetails(null);
-    setActiveRequestTab('params');
-    setBodyType('form');
+    
+    // Set 'body' as active tab if the endpoint has body parameters
+    if (currentEndpoint.bodyParams && currentEndpoint.bodyParams.length > 0 && 
+        ['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method)) {
+      setActiveRequestTab('body');
+      
+      // Always regenerate the JSON template when opening the modal
+      const templateJson = generateJsonTemplate();
+      console.log('Generated template:', templateJson);
+      setRawBody(templateJson);
+    } else {
+      setActiveRequestTab('params');
+    }
+    
+    setBodyType('raw');
     
     // Set initial headers based on current endpoint
     const initialHeaders: {[key: string]: string} = {
@@ -1786,6 +1902,7 @@ const ApiDoc: React.FC = (): JSX.Element => {
     setResponseDetails(null);
     setApiError('');
     setRequestParams({});
+    setRawBody(''); // Reset raw body when changing endpoints
     setEditableUrl(''); // Reset editable URL when changing endpoints
     
     // Add animation flag
@@ -2941,10 +3058,18 @@ print(data)`;
                   .request-tab {
                     padding: 8px 16px;
                     cursor: pointer;
-                    border-radius: 4px;
+                    border-radius: 4px 4px 0 0;
                     font-size: 0.9rem;
                     color: var(--text-secondary);
                     transition: all 0.2s ease;
+                    position: relative;
+                    border-bottom: 3px solid transparent;
+                    margin-bottom: -1px;
+                  }
+
+                  @keyframes tabActivate {
+                    0% { transform: translateY(2px); opacity: 0.7; }
+                    100% { transform: translateY(0); opacity: 1; }
                   }
 
                   .request-tab:hover {
@@ -2953,8 +3078,45 @@ print(data)`;
                   }
 
                   .request-tab.active {
-                    background: var(--accent-color);
-                    color: white;
+                    background: var(--background-tertiary);
+                    color: var(--accent-color);
+                    font-weight: 600;
+                    box-shadow: 0 -2px 8px rgb(255 255 255 / 70%);
+                    animation: tabActivate 0.3s ease forwards;
+                  }
+                  
+                  .request-tab.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -3px;
+                    left: 0;
+                    width: 100%;
+                    height: 3px;
+                    background-color: var(--accent-color);
+                    border-radius: 3px 3px 0 0;
+                  }
+                  
+                  .light-theme .request-tab {
+                    color: var(--text-muted);
+                  }
+                  
+                  .light-theme .request-tab:hover {
+                    background: rgba(0, 0, 0, 0.05);
+                    color: var(--text-color);
+                  }
+                  
+                  .light-theme .request-tab.active {
+                    background: rgba(0, 0, 0, 0.03);
+                    color: var(--primary-purple);
+                    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.03);
+                  }
+                  
+                  .light-theme .request-tab.active::after {
+                    background-color: var(--primary-purple);
+                  }
+                  
+                  .request-tab-content {
+                    animation: fadeIn 0.3s ease;
                   }
 
                   .try-it-section {
@@ -3249,7 +3411,15 @@ print(data)`;
                       </button>
                       <button 
                         className={`body-type-btn ${bodyType === 'raw' ? 'active' : ''}`}
-                        onClick={() => setBodyType('raw')}
+                        onClick={() => {
+                          setBodyType('raw');
+                          
+                          // Generate a default template when switching to raw mode
+                          if (!rawBody || rawBody.trim() === '') {
+                            const templateJson = generateJsonTemplate();
+                            setRawBody(templateJson);
+                          }
+                        }}
                       >
                         Raw
                       </button>
@@ -3293,12 +3463,54 @@ print(data)`;
                     
                     {bodyType === 'raw' && (
                       <div className="raw-body-editor">
+                        <div className="raw-body-hint" style={{
+                          marginBottom: "8px",
+                          fontSize: "13px",
+                          color: "var(--text-muted)",
+                          padding: "8px 12px",
+                          backgroundColor: "var(--background-secondary)",
+                          borderRadius: "4px",
+                          border: "1px solid var(--border-color)"
+                        }}>
+                          <strong>Tip:</strong> Fill in the values between quotes for the fields you want to include in your request.
+                          <button 
+                            style={{
+                              marginLeft: "10px",
+                              padding: "3px 8px",
+                              fontSize: "12px",
+                              backgroundColor: "var(--accent-color)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer"
+                            }}
+                            onClick={() => {
+                              const templateJson = generateJsonTemplate();
+                              setRawBody(templateJson);
+                            }}
+                          >
+                            Generate Template
+                          </button>
+                        </div>
                         <textarea
                           className="raw-body-textarea"
                           value={rawBody}
                           onChange={(e) => setRawBody(e.target.value)}
                           placeholder="Enter raw JSON body"
                           spellCheck="false"
+                          style={{
+                            minHeight: "350px",
+                            fontSize: "14px",
+                            fontFamily: "'Fira Code', monospace",
+                            lineHeight: "1.5",
+                            padding: "15px",
+                            width: "100%",
+                            border: "1px solid var(--border-color)",
+                            borderRadius: "4px",
+                            backgroundColor: "var(--input-bg)",
+                            color: "var(--text-color)",
+                            boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.1)"
+                          }}
                         />
                         <div className="raw-body-format-btn" onClick={() => {
                           try {
