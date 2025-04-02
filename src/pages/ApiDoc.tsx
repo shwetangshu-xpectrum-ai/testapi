@@ -1520,18 +1520,27 @@ const ApiDoc: React.FC = (): JSX.Element => {
             const parsedBody = JSON.parse(rawBody);
             options.body = JSON.stringify(parsedBody);
           } catch (error) {
-            throw new Error('Invalid JSON in request body');
+            throw new Error('Invalid JSON in request body: ' + (error instanceof Error ? error.message : String(error)));
           }
         } else {
           // Use form data if not using raw JSON
           const bodyData: {[key: string]: any} = {};
           if (currentEndpoint.bodyParams) {
             currentEndpoint.bodyParams.forEach(param => {
-              if (requestParams[param.name]) {
+              // Only include parameters that have values
+              if (requestParams[param.name] !== undefined && requestParams[param.name] !== '') {
+                // Convert values to appropriate types
                 if (param.type === 'number' || param.type === 'integer') {
                   bodyData[param.name] = Number(requestParams[param.name]);
                 } else if (param.type === 'boolean') {
                   bodyData[param.name] = requestParams[param.name] === 'true';
+                } else if (param.type === 'object' || param.type === 'array') {
+                  // Try to parse as JSON if it's an object or array
+                  try {
+                    bodyData[param.name] = JSON.parse(requestParams[param.name]);
+                  } catch (error) {
+                    bodyData[param.name] = requestParams[param.name];
+                  }
                 } else {
                   bodyData[param.name] = requestParams[param.name];
                 }
@@ -1544,35 +1553,47 @@ const ApiDoc: React.FC = (): JSX.Element => {
       
       console.log(`Making ${currentEndpoint.method} request to: ${apiUrl}`);
       console.log('Request options:', options);
+      console.log('Request body:', options.body);
       
       // Make the API call
       fetch(apiUrl, options)
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-          }
+          // Extract headers to display in response
+          const headers: {[key: string]: string} = {};
+          response.headers.forEach((value, key) => {
+            headers[key] = value;
+          });
           
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('Response is not JSON');
-          }
-          
+          // Return response data even if status code indicates error
           return {
             response,
             status: response.status,
             statusText: response.statusText,
-            time: Math.round(performance.now() - startTime)
+            time: Math.round(performance.now() - startTime),
+            headers
           };
         })
-        .then(({response, status, statusText, time}) => {
-          return response.json().then(data => ({
+        .then(({response, status, statusText, time, headers}) => {
+          // Try to parse as JSON, but gracefully handle non-JSON responses
+          return response.text().then(text => {
+            let data;
+            try {
+              data = text && text.trim() ? JSON.parse(text) : {};
+            } catch (error) {
+              // If response is not valid JSON, use raw text
+              data = { rawResponse: text };
+            }
+            
+            return {
             data,
             status,
             statusText,
-            time
-          }));
+              time,
+              headers
+            };
+          });
         })
-        .then(({data, status, statusText, time}) => {
+        .then(({data, status, statusText, time, headers}) => {
           const responseSize = JSON.stringify(data).length;
           const formattedSize = responseSize < 1024 
             ? `${responseSize} B` 
@@ -1583,7 +1604,7 @@ const ApiDoc: React.FC = (): JSX.Element => {
             statusText,
             time,
             size: formattedSize,
-            headers: {}
+            headers
           });
           
           setApiResponse(data);
@@ -1947,24 +1968,53 @@ print(data)`;
 
   // Update response example to match the screenshot
   const renderResponseExample = () => {
+    if (!apiResponse) {
     return (
-      <pre className="json-example">
-        <div dangerouslySetInnerHTML={{ 
-          __html: `{
-  <span class="property">"employee_id"</span>: <span class="string">"EMP001"</span>,
-  <span class="property">"first_name"</span>: <span class="string">"John"</span>,
-  <span class="property">"last_name"</span>: <span class="string">"Smith"</span>,
-  <span class="property">"email"</span>: <span class="string">"john.smith@example.com"</span>,
-  <span class="property">"phone_number"</span>: <span class="string">"+1 123-456-7890"</span>,
-  <span class="property">"hire_date"</span>: <span class="string">"2019-06-15"</span>,
-  <span class="property">"job_title"</span>: <span class="string">"Senior Developer"</span>,
-  <span class="property">"job_id"</span>: <span class="number">5</span>,
-  <span class="property">"department"</span>: <span class="string">"Engineering"</span>,
-  <span class="property">"status"</span>: <span class="string">"active"</span>
-}`
-        }} />
+        <pre className="response-example-empty">
+          {JSON.stringify(JSON.parse(currentEndpoint.response.example), null, 2)}
       </pre>
     );
+    }
+    
+    // Format the JSON response
+    try {
+      // Clone the apiResponse to avoid modifying the original
+      const formattedResponse = JSON.parse(JSON.stringify(apiResponse));
+      
+      // If the response has a rawResponse property (non-JSON responses), display it as text
+      if (formattedResponse.rawResponse) {
+        return (
+          <pre className="response-example">
+            {formattedResponse.rawResponse}
+          </pre>
+        );
+      }
+      
+      // Format arrays for better readability
+      Object.keys(formattedResponse).forEach(key => {
+        if (Array.isArray(formattedResponse[key]) && formattedResponse[key].length > 0) {
+          // If it's a large array, limit display but show the full length
+          if (formattedResponse[key].length > 20) {
+            const totalLength = formattedResponse[key].length;
+            formattedResponse[key] = formattedResponse[key].slice(0, 20);
+            formattedResponse[key].push(`... ${totalLength - 20} more items (truncated for display)`);
+          }
+        }
+      });
+      
+      return (
+        <pre className="response-example">
+          {JSON.stringify(formattedResponse, null, 2)}
+        </pre>
+      );
+    } catch (error) {
+      console.error('Error formatting response:', error);
+      return (
+        <pre className="response-example">
+          {JSON.stringify(apiResponse, null, 2)}
+        </pre>
+      );
+    }
   };
 
   // Close dropdown when clicking outside
@@ -3205,173 +3255,61 @@ print(data)`;
                       </button>
                     </div>
                     
-                    {bodyType === 'raw' && (
-                      <div className="raw-body-section">
-                        <div className="raw-body-header">
-                          <div className="content-type-selector">
-                            <select 
-                              value="application/json" 
-                              onChange={() => {}}
-                              className="content-type-select"
-                            >
-                              <option value="application/json">JSON</option>
-                            </select>
+                    {bodyType === 'form' && (
+                      <div className="params-table">
+                        <div className="param-row header">
+                          <div className="param-name">Parameter</div>
+                          <div className="param-value">Value</div>
+                          <div className="param-type">Type</div>
+                          <div className="param-required">Required</div>
                           </div>
-                          <button 
-                            className="format-json-btn"
-                            onClick={() => {
-                              try {
-                                // Get the appropriate model based on the endpoint
-                                let modelExample: any = {};
-                                if (currentEndpoint.url.includes('employee_data')) {
-                                  modelExample = {
-                                    employee_id: "EMP001",
-                                    first_name: "John",
-                                    last_name: "Smith",
-                                    email: "john.smith@example.com",
-                                    phone_number: "+1 123-456-7890",
-                                    hire_date: "2023-01-01",
-                                    job_title: "Software Engineer",
-                                    job_id: 1,
-                                    gov_id: "123-45-6789",
-                                    hiring_manager_id: "EMP002",
-                                    hr_manager_id: "EMP003",
-                                    marital_status: "single",
-                                    state: "CA",
-                                    emergency_contact_name: "Jane Doe",
-                                    emergency_contact_phone: "+1 987-654-3210",
-                                    sex: "M",
-                                    department: "Engineering",
-                                    date_of_birth: "1990-01-01",
-                                    status: "active"
-                                  };
-                                } else if (currentEndpoint.url.includes('insurance_data')) {
-                                  modelExample = {
-                                    employee_id: "EMP001",
-                                    plan_name: "Premium Health Plan",
-                                    insurance_plan_id: "INS001",
-                                    enrollment_date: "2023-01-01",
-                                    coverage_type: "family",
-                                    employee_contribution: 250.00,
-                                    enrollment_time: "09:00:00"
-                                  };
-                                } else if (currentEndpoint.url.includes('insurance_plan')) {
-                                  modelExample = {
-                                    plan_name: "Premium Health Plan",
-                                    plan_id: "INS001",
-                                    network: "Nationwide",
-                                    deductible_individual_family: "$500/$1000",
-                                    out_of_pocket_maximum_individual_family: "$3000/$6000",
-                                    coinsurance: "80/20",
-                                    overall_lifetime_maximum: "Unlimited",
-                                    rates_premium_employee_only: 500.00,
-                                    rates_premium_employer_contribution_employee_only: 400.00,
-                                    rates_premium_employee_contribution_employee_only: 100.00,
-                                    rates_premium_employee_spouse: 800.00,
-                                    rates_premium_employer_contribution_employee_spouse: 600.00,
-                                    rates_premium_employee_contribution_employee_spouse: 200.00,
-                                    rates_premium_employee_children: 750.00,
-                                    rates_premium_employer_contribution_employee_children: 550.00,
-                                    rates_premium_employee_contribution_employee_children: 200.00,
-                                    rates_premium_family: 1200.00,
-                                    rates_premium_employer_contribution_family: 950.00,
-                                    rates_premium_employee_contribution_family: 250.00
-                                  };
-                                } else if (currentEndpoint.url.includes('leave_balance')) {
-                                  modelExample = {
-                                    employee_id: "EMP001",
-                                    annual_leave_balance: 20,
-                                    sick_leave_balance: 10,
-                                    personal_leave_balance: 5,
-                                    unpaid_leave_taken: 0,
-                                    leave_balance_updated_date: "2023-01-01"
-                                  };
-                                } else if (currentEndpoint.url.includes('leave_requests')) {
-                                  modelExample = {
-                                    employee_id: "EMP001",
-                                    application_id: 1,
-                                    start_date: "2023-07-01",
-                                    total_working_days_off: 5,
-                                    total_days_off: 7,
-                                    end_date: "2023-07-07",
-                                    deduction_from_salary: 0,
-                                    leave_type: "annual",
-                                    reason: "Vacation",
-                                    request_date: "2023-06-01",
-                                    request_time: "09:00:00",
-                                    reviewed_by: "EMP002",
-                                    status: "pending",
-                                    approved_by: null
-                                  };
-                                } else if (currentEndpoint.url.includes('payroll')) {
-                                  modelExample = {
-                                    employee_id: "EMP001",
-                                    base_salary: 5000.00,
-                                    federal_tax: 1000.00,
-                                    state_tax: 500.00,
-                                    total_tax: 1500.00,
-                                    month: "2023-07",
-                                    salary_received_day: "2023-07-01"
-                                  };
-                                } else if (currentEndpoint.url.includes('salary_info')) {
-                                  modelExample = {
-                                    employee_id: "EMP001",
-                                    base_salary: 60000.00,
-                                    salary_type: "annual",
-                                    bonus: 5000.00,
-                                    commission: 2000.00,
-                                    currency: "USD",
-                                    salary_grade: "L3",
-                                    last_salary_increase_date: "2023-01-01"
-                                  };
-                                }
-                                
-                                setRawBody(JSON.stringify(modelExample, null, 2));
-                              } catch (error) {
-                                console.error('Error formatting JSON:', error);
-                              }
-                            }}
-                          >
-                            Format with Model
-                          </button>
-                        </div>
-                        <div className="editor-container">
-                          <textarea
-                            className="raw-body-editor"
-                            value={rawBody}
-                            onChange={(e) => setRawBody(e.target.value)}
-                            placeholder={`Enter request body as JSON\n\nExample:\n{\n  "key": "value"\n}`}
-                            rows={15}
-                            spellCheck={false}
-                          />
-                        </div>
+                        {currentEndpoint.bodyParams && currentEndpoint.bodyParams.map((param, index) => (
+                          <div className="param-row" key={index}>
+                            <div className="param-name">
+                                {param.name}
+                              {param.required && <span className="required-badge">*</span>}
+                            </div>
+                            <div className="param-value">
+                              <input
+                                type={param.type === 'password' ? 'password' : 'text'}
+                                className="param-input"
+                                value={requestParams[param.name] || ''}
+                                onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                                placeholder={param.example || `Enter ${param.name}`}
+                              />
+                              </div>
+                            <div className="param-type">{param.type}</div>
+                            <div className="param-required">{param.required ? 'Yes' : 'No'}</div>
+                            {param.description && (
+                              <div className="param-description">
+                                <span className="info-icon" title={param.description}>ℹ️</span>
+                                <div className="param-description-tooltip">{param.description}</div>
+                              </div>
+                            )}
+                            </div>
+                          ))}
                       </div>
                     )}
                     
-                    {bodyType === 'form' && currentEndpoint.bodyParams && (
-                      <div className="form-body-section">
-                        <div className="form-body-fields">
-                          {currentEndpoint.bodyParams.map((param, index) => (
-                            <div className="form-field" key={index}>
-                              <label className="form-field-label">
-                                {param.name}
-                                {(param.required || param.name === 'employee_id') && (
-                                  <span className="required-badge">required</span>
-                                )}
-                              </label>
-                              <input
-                                type={param.type === 'number' || param.type === 'integer' ? 'number' : 'text'}
-                                className="form-field-input"
-                                value={requestParams[param.name] || ''}
-                                onChange={(e) => updateRequestParam(param.name, e.target.value)}
-                                placeholder={param.example ? param.example.replace('Example: ', '') : `Enter ${param.name}`}
-                                required={param.required || param.name === 'employee_id'}
-                              />
-                              <div className="form-field-description">
-                                {param.description || `${param.type}${param.required || param.name === 'employee_id' ? ' - Required' : ' - Optional'}`}
-                              </div>
-                            </div>
-                          ))}
+                    {bodyType === 'raw' && (
+                      <div className="raw-body-editor">
+                        <textarea
+                          className="raw-body-textarea"
+                          value={rawBody}
+                          onChange={(e) => setRawBody(e.target.value)}
+                          placeholder="Enter raw JSON body"
+                          spellCheck="false"
+                        />
+                        <div className="raw-body-format-btn" onClick={() => {
+                          try {
+                            const formatted = JSON.stringify(JSON.parse(rawBody), null, 2);
+                            setRawBody(formatted);
+                          } catch (error) {
+                            // If JSON is invalid, don't format
+                            console.error('Invalid JSON:', error);
+                          }
+                        }}>
+                          Format
                         </div>
                       </div>
                     )}
