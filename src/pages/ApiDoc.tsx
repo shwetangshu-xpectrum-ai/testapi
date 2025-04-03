@@ -2270,8 +2270,27 @@ print(data)`;
     setShowApiConfigModal(false);
   };
 
+  // Add click outside handler
+  const apiPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (apiPanelRef.current && !apiPanelRef.current.contains(event.target as Node)) {
+        setShowTryItModal(false);
+      }
+    };
+
+    if (showTryItModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTryItModal]);
+
   return (
-    <div className={`api-doc-container ${mobileMenuOpen ? 'mobile-menu-open' : ''} ${darkMode ? 'dark-theme' : 'light-theme'}`}>
+    <div className={`api-doc-container ${mobileMenuOpen ? 'mobile-menu-open' : ''} ${darkMode ? 'dark-theme' : 'light-theme'} ${showTryItModal ? 'with-api-panel' : ''}`}>
       {/* Mobile menu toggle */}
       <div className="mobile-menu-toggle" onClick={toggleMobileMenu}>
         <div className={`hamburger ${mobileMenuOpen ? 'active' : ''}`}>
@@ -2466,13 +2485,82 @@ print(data)`;
       ></div>
 
       {/* Main Content */}
-      <main className="api-content">
-        <div className="api-header animate-fadeIn">
+      <main className={`api-content ${showTryItModal ? 'with-api-panel' : ''}`}>
+        <div className="api-header">
           <div className="api-breadcrumb">{currentEndpoint.breadcrumb}</div>
           <h1 className="api-title">
             {currentEndpoint.title} <span className="api-badge">{currentEndpoint.badge}</span>
           </h1>
         </div>
+
+        <style>
+          {`
+            /* Remove any fixed positioning from headers */
+            .api-header {
+              padding: 20px;
+              background: var(--background-primary);
+              position: relative; /* Change from fixed/sticky to relative */
+              z-index: 1;
+            }
+
+            .api-content {
+              overflow-y: auto;
+              height: 100%;
+              position: relative;
+            }
+
+            /* Update the try-it-modal-header to not be sticky */
+            .try-it-modal-header {
+              background: var(--background-primary);
+              padding-bottom: 16px;
+              border-bottom: 1px solid var(--border-color);
+              position: relative; /* Change from sticky to relative */
+              z-index: 1;
+            }
+
+            /* Ensure proper scrolling for the panel content */
+            .api-testing-panel-content {
+              height: 100%;
+              overflow-y: auto;
+              position: relative;
+            }
+
+            /* Remove any fixed positioning from other header elements */
+            .endpoint-method,
+            .endpoint-url,
+            .endpoint-actions {
+              position: relative;
+            }
+
+            .api-doc-container {
+              height: 100vh;
+              display: flex;
+            }
+
+            .api-sidebar {
+              height: 100%;
+              overflow-y: auto;
+            }
+
+            /* Ensure the main content area scrolls properly */
+            main.api-content {
+              flex: 1;
+              overflow-y: auto;
+              height: 100vh;
+            }
+
+            /* Update panel styling to ensure proper scrolling */
+            .api-testing-panel {
+              position: fixed;
+              top: 0;
+              right: 0;
+              width: 600px;
+              height: 100vh;
+              overflow-y: auto;
+              background: #1a1a1a;
+            }
+          `}
+        </style>
 
         <div className="api-endpoint animate-slideIn">
           <div className={`endpoint-method ${getMethodClassName(currentEndpoint.method)}`}>
@@ -2745,8 +2833,8 @@ print(data)`;
 
         {/* Try It Modal */}
         {showTryItModal && (
-          <div className="try-it-modal-overlay">
-            <div className="try-it-modal">
+          <div className="api-testing-panel">
+            <div className="api-testing-panel-content">
               <div className="try-it-modal-header">
                 <div className="try-it-title-section">
                   <span className={`endpoint-method ${getMethodClassName(currentEndpoint.method)}`}>
@@ -2755,15 +2843,7 @@ print(data)`;
                   <div className="d-flex align-items-center">
                     <h2>{activeEndpoint === 'getEmployeeById' && (apiBaseUrl || isResponseFromApi) ? 'Get Employee Data' : currentEndpoint.title}</h2>
                     {isResponseFromApi && (
-                      <span className="ms-2 badge" style={{ 
-                        fontSize: '0.7rem', 
-                        padding: '0.35em 0.65em', 
-                        backgroundColor: 'rgba(0, 180, 60, 0.8)', 
-                        color: 'white',
-                        borderRadius: '4px'
-                      }}>
-                        API
-                      </span>
+                      <span className="ms-2 badge">API</span>
                     )}
                   </div>
                 </div>
@@ -4176,6 +4256,1146 @@ print(data)`;
            font-size: 0.8rem;
            color: var(--text-secondary);
          }
+
+         .api-doc-container {
+           display: flex;
+           position: relative;
+           height: 100vh;
+           transition: all 0.3s ease;
+         }
+
+         .api-doc-container.with-api-panel .api-content {
+           width: calc(100% - 600px);
+           transition: width 0.3s ease;
+         }
+
+         .api-testing-panel {
+           position: fixed;
+           top: 0;
+           right: 0;
+           width: 600px;
+           height: 100vh;
+           background: var(--background-primary);
+           border-left: 1px solid var(--border-color);
+           overflow-y: auto;
+           z-index: 100;
+           animation: slideIn 0.3s ease;
+         }
+
+         .api-testing-panel-content {
+           padding: 20px;
+           height: 100%;
+           overflow-y: auto;
+         }
+
+         @keyframes slideIn {
+           from {
+             transform: translateX(100%);
+           }
+           to {
+             transform: translateX(0);
+           }
+         }
+
+         .api-content {
+           flex: 1;
+           transition: width 0.3s ease;
+           width: 100%;
+         }
+
+         .api-content.with-api-panel {
+           width: calc(100% - 600px);
+         }
+
+         /* Adjust responsive behavior */
+         @media (max-width: 1200px) {
+           .api-testing-panel {
+             width: 500px;
+           }
+           
+           .api-doc-container.with-api-panel .api-content {
+             width: calc(100% - 500px);
+           }
+         }
+
+         @media (max-width: 992px) {
+           .api-testing-panel {
+             width: 100%;
+             position: fixed;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             z-index: 1000;
+           }
+           
+           .api-doc-container.with-api-panel .api-content {
+             width: 100%;
+           }
+         }
+
+         /* Update existing modal styles for the panel */
+         .try-it-modal-header {
+           position: sticky;
+           top: 0;
+           background: var(--background-primary);
+           z-index: 10;
+           padding-bottom: 16px;
+           border-bottom: 1px solid var(--border-color);
+         }
+
+         .try-it-modal-close {
+           padding: 4px 8px;
+           background: none;
+           border: none;
+           font-size: 20px;
+           cursor: pointer;
+           color: var(--text-secondary);
+         }
+
+         .try-it-modal-close:hover {
+           color: var(--text-primary);
+         }
+
+         .api-panel-overlay {
+           position: fixed;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           background-color: rgba(0, 0, 0, 0.75);
+           z-index: 99;
+           animation: fadeIn 0.3s ease;
+         }
+
+         .api-testing-panel {
+           position: fixed;
+           top: 0;
+           right: 0;
+           width: 600px;
+           height: 100vh;
+           background: var(--background-primary);
+           border-left: 1px solid var(--border-color);
+           overflow-y: auto;
+           z-index: 100;
+           animation: slideIn 0.3s ease;
+         }
+
+         @keyframes fadeIn {
+           from {
+             opacity: 0;
+           }
+           to {
+             opacity: 1;
+           }
+         }
+
+         /* Update the slideIn animation to work with the overlay */
+         @keyframes slideIn {
+           from {
+             transform: translateX(100%);
+             opacity: 0;
+           }
+           to {
+             transform: translateX(0);
+             opacity: 1;
+           }
+         }
+
+         /* Prevent scrolling of main content when panel is open */
+         .api-doc-container.with-api-panel {
+           overflow: hidden;
+         }
+
+         /* Ensure the panel content is on top of the overlay */
+         .api-testing-panel-content {
+           position: relative;
+           z-index: 101;
+           background: var(--background-primary);
+         }
+
+         /* Make sure the background stays dark in both themes */
+         .light-theme .api-panel-overlay,
+         .dark-theme .api-panel-overlay {
+           background-color: rgba(0, 0, 0, 0.75);
+         }
+
+         /* Ensure the panel has a dark background */
+         .api-testing-panel {
+           background: #1a1a1a;
+         }
+
+         /* Add a subtle shadow to the panel */
+         .api-testing-panel {
+           box-shadow: -4px 0 15px rgba(0, 0, 0, 0.5);
+         }
+        `}
+      </style>
+
+      {/* API Testing Panel with Overlay */}
+      {showTryItModal && (
+        <>
+          <div className="api-panel-overlay"></div>
+          <div className="api-testing-panel" ref={apiPanelRef}>
+            <div className="api-testing-panel-content">
+              <div className="try-it-modal-header">
+                <div className="try-it-title-section">
+                  <span className={`endpoint-method ${getMethodClassName(currentEndpoint.method)}`}>
+                    {currentEndpoint.method}
+                  </span>
+                  <div className="d-flex align-items-center">
+                    <h2>{activeEndpoint === 'getEmployeeById' && (apiBaseUrl || isResponseFromApi) ? 'Get Employee Data' : currentEndpoint.title}</h2>
+                    {isResponseFromApi && (
+                      <span className="ms-2 badge">API</span>
+                    )}
+                  </div>
+                </div>
+                <div className="try-it-controls">
+                  <button 
+                    className="environment-selector" 
+                    onClick={toggleEnvironmentModal}
+                  >
+                    {activeEnvironment} <span className="dropdown-arrow">▼</span>
+                  </button>
+                  <button 
+                    className="try-it-modal-close" 
+                    onClick={() => setShowTryItModal(false)}
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+              
+              <div className="try-it-url-bar">
+                <span className={`method-badge ${getMethodClassName(currentEndpoint.method)}`}>
+                  {currentEndpoint.method}
+                </span>
+                {isEditingUrl ? (
+                  <div className="url-input-container">
+                    <input
+                      type="text"
+                      className="url-input"
+                      value={editableUrl}
+                      onChange={(e) => setEditableUrl(e.target.value)}
+                      onBlur={() => setIsEditingUrl(false)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          setIsEditingUrl(false);
+                        } else if (e.key === 'Escape') {
+                          setEditableUrl('');
+                          setIsEditingUrl(false);
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <button 
+                      className="url-reset-button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        // Construct the default URL
+                        const defaultUrl = (() => {
+                          let apiUrl = `${apiBaseUrl}`;
+                          
+                          // Map the endpoint to the correct API path
+                          if (activeEndpoint.includes('Employee')) {
+                            apiUrl += '/employee_data';
+                          } else if (activeEndpoint.includes('Salary')) {
+                            apiUrl += '/salary_data';
+                          } else if (activeEndpoint.includes('Payroll')) {
+                            apiUrl += '/payroll_data';
+                          }
+                          
+                          // Handle path parameters like {employee_id}
+                          if (currentEndpoint.url.includes('{employee_id}')) {
+                            apiUrl += `/${requestParams.employee_id || realEmployeeId}`;
+                          }
+                          
+                          // Add query parameters if any exist for this endpoint
+                          if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+                            const queryParams = new URLSearchParams();
+                            
+                            currentEndpoint.queryParams.forEach(param => {
+                              if (requestParams[param.name]) {
+                                queryParams.append(param.name, requestParams[param.name]);
+                              }
+                            });
+                            
+                            const queryString = queryParams.toString();
+                            if (queryString) {
+                              apiUrl += `?${queryString}`;
+                            }
+                          }
+                          
+                          return apiUrl;
+                        })();
+                        
+                        setEditableUrl(defaultUrl);
+                      }}
+                      title="Reset to default URL"
+                    >
+                      ↺
+                    </button>
+                  </div>
+                ) : (
+                  <div 
+                    className="url-display"
+                    onClick={() => {
+                      // Initialize editable URL with current display URL value
+                      const currentUrl = isResponseFromApi ? 
+                        (() => {
+                          // Construct the display URL for the API
+                          let apiUrl = `${apiBaseUrl}`;
+                          
+                          // Map the endpoint to the correct API path
+                          if (activeEndpoint.includes('Employee')) {
+                            apiUrl += '/employee_data';
+                          } else if (activeEndpoint.includes('Salary')) {
+                            apiUrl += '/salary_data';
+                          } else if (activeEndpoint.includes('Payroll')) {
+                            apiUrl += '/payroll_data';
+                          }
+                          
+                          // Handle path parameters like {employee_id}
+                          if (currentEndpoint.url.includes('{employee_id}')) {
+                            apiUrl += `/${requestParams.employee_id || realEmployeeId}`;
+                          }
+                          
+                          // Add query parameters if any exist for this endpoint
+                          if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+                            const queryParams = new URLSearchParams();
+                            
+                            currentEndpoint.queryParams.forEach(param => {
+                              if (requestParams[param.name]) {
+                                queryParams.append(param.name, requestParams[param.name]);
+                              }
+                            });
+                            
+                            const queryString = queryParams.toString();
+                            if (queryString) {
+                              apiUrl += `?${queryString}`;
+                            }
+                          }
+                          
+                          return apiUrl;
+                        })()
+                        : (currentEndpoint.url.includes('{employee_id}')
+                          ? currentEndpoint.url.replace('{employee_id}', requestParams.employee_id || '{employee_id}')
+                          : currentEndpoint.url);
+                      
+                      setEditableUrl(currentUrl);
+                      setIsEditingUrl(true);
+                    }}
+                    title="Click to edit URL"
+                  >
+                    {isResponseFromApi ? 
+                      (() => {
+                        // Construct the display URL for the API
+                        let apiUrl = `${apiBaseUrl}`;
+                        
+                        // Map the endpoint to the correct API path
+                        if (activeEndpoint.includes('Employee')) {
+                          apiUrl += '/employee_data';
+                        } else if (activeEndpoint.includes('Salary')) {
+                          apiUrl += '/salary_data';
+                        } else if (activeEndpoint.includes('Payroll')) {
+                          apiUrl += '/payroll_data';
+                        }
+                        
+                        // Handle path parameters like {employee_id}
+                        if (currentEndpoint.url.includes('{employee_id}')) {
+                          apiUrl += `/${requestParams.employee_id || realEmployeeId}`;
+                          
+                          // Update request params
+                          if (!requestParams.employee_id && realEmployeeId) {
+                            setTimeout(() => {
+                              updateRequestParam('employee_id', realEmployeeId);
+                            }, 0);
+                          }
+                        }
+                        
+                        // Add query parameters if any exist for this endpoint
+                        if (currentEndpoint.queryParams && currentEndpoint.queryParams.length > 0) {
+                          const queryParams = new URLSearchParams();
+                          
+                          currentEndpoint.queryParams.forEach(param => {
+                            if (requestParams[param.name]) {
+                              queryParams.append(param.name, requestParams[param.name]);
+                            }
+                          });
+                          
+                          const queryString = queryParams.toString();
+                          if (queryString) {
+                            apiUrl += `?${queryString}`;
+                          }
+                        }
+                        
+                        return apiUrl;
+                      })()
+                      : (currentEndpoint.url.includes('{employee_id}')
+                        ? currentEndpoint.url.replace('{employee_id}', requestParams.employee_id || '{employee_id}')
+                        : currentEndpoint.url)
+                    }
+                  </div>
+                )}
+                <button 
+                  className={`send-request-button ${isLoading ? 'loading' : ''}`} 
+                  onClick={handleApiCall}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="button-spinner"></div>
+                      <span>Sending...</span>
+                    </>
+                  ) : 'Send'}
+                </button>
+              </div>
+              
+              <div className="try-it-tabs" style={{ display: 'none' }}>
+                <button 
+                  className={`try-it-tab ${activeRequestTab === 'params' ? 'active' : ''}`}
+                  onClick={() => setActiveRequestTab('params')}
+                >
+                  Params
+                </button>
+                <button 
+                  className={`try-it-tab ${activeRequestTab === 'headers' ? 'active' : ''}`}
+                  onClick={() => setActiveRequestTab('headers')}
+                >
+                  Headers
+                </button>
+                {['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && (
+                  <button 
+                    className={`try-it-tab ${activeRequestTab === 'body' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('body')}
+                  >
+                    Body
+                  </button>
+                )}
+                <button 
+                  className={`try-it-tab ${activeRequestTab === 'auth' ? 'active' : ''}`}
+                  onClick={() => setActiveRequestTab('auth')}
+                >
+                  Authorization
+                </button>
+              </div>
+              
+              <div className="try-it-modal-content">
+                <div className="api-base-url-container">
+                  <div className="api-base-url-label">API Base URL:</div>
+                  <div className="api-base-url-value">
+                    <input 
+                      type="text" 
+                      className="api-base-url-input" 
+                      value={apiBaseUrl} 
+                      onChange={(e) => setApiBaseUrl(e.target.value)}
+                      placeholder="Enter API base URL"
+                    />
+                  </div>
+                </div>
+
+                <div className="request-tabs">
+                  <div
+                    className={`request-tab ${activeRequestTab === 'params' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('params')}
+                  >
+                    <span>Params</span>
+                  </div>
+                  <div
+                    className={`request-tab ${activeRequestTab === 'headers' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('headers')}
+                  >
+                    <span>Headers</span>
+                  </div>
+                  {['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && (
+                    <div
+                      className={`request-tab ${activeRequestTab === 'body' ? 'active' : ''}`}
+                      onClick={() => setActiveRequestTab('body')}
+                    >
+                      <span>Body</span>
+                    </div>
+                  )}
+                  <div
+                    className={`request-tab ${activeRequestTab === 'auth' ? 'active' : ''}`}
+                    onClick={() => setActiveRequestTab('auth')}
+                  >
+                    <span>Authorization</span>
+                  </div>
+                </div>
+
+                {/* Add styles for the request tabs */}
+                <style>
+                {`
+                  .request-tabs {
+                    display: flex;
+                    gap: 2px;
+                    margin-bottom: 16px;
+                    border-bottom: 1px solid var(--border-color);
+                    background: var(--background-secondary);
+                    padding: 4px;
+                    border-radius: 4px;
+                  }
+
+                  .request-tab {
+                    padding: 8px 16px;
+                    cursor: pointer;
+                    border-radius: 4px 4px 0 0;
+                    font-size: 0.9rem;
+                    color: var(--text-secondary);
+                    transition: all 0.2s ease;
+                    position: relative;
+                    border-bottom: 3px solid transparent;
+                    margin-bottom: -1px;
+                  }
+
+                  @keyframes tabActivate {
+                    0% { transform: translateY(2px); opacity: 0.7; }
+                    100% { transform: translateY(0); opacity: 1; }
+                  }
+
+                  .request-tab:hover {
+                    background: var(--background-tertiary);
+                    color: var(--text-primary);
+                  }
+
+                  .request-tab.active {
+                    background: var(--background-tertiary);
+                    color: var(--accent-color);
+                    font-weight: 600;
+                    box-shadow: 0 -2px 8px rgb(255 255 255 / 70%);
+                    animation: tabActivate 0.3s ease forwards;
+                  }
+                  
+                  .request-tab.active::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -3px;
+                    left: 0;
+                    width: 100%;
+                    height: 3px;
+                    background-color: var(--accent-color);
+                    border-radius: 3px 3px 0 0;
+                  }
+                  
+                  .light-theme .request-tab {
+                    color: var(--text-muted);
+                  }
+                  
+                  .light-theme .request-tab:hover {
+                    background: rgba(0, 0, 0, 0.05);
+                    color: var(--text-color);
+                  }
+                  
+                  .light-theme .request-tab.active {
+                    background: rgba(0, 0, 0, 0.03);
+                    color: var(--primary-purple);
+                    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.03);
+                  }
+                  
+                  .light-theme .request-tab.active::after {
+                    background-color: var(--primary-purple);
+                  }
+                  
+                  .request-tab-content {
+                    animation: fadeIn 0.3s ease;
+                  }
+
+                  .try-it-section {
+                    padding: 16px;
+                    background: var(--background-primary);
+                    border-radius: 4px;
+                    margin-bottom: 16px;
+                  }
+
+                  .body-type-selector {
+                    display: flex;
+                    gap: 8px;
+                    margin-bottom: 16px;
+                  }
+
+                  .body-type-btn {
+                    padding: 6px 12px;
+                    border: 1px solid var(--border-color);
+                    background: var(--background-secondary);
+                    color: var(--text-primary);
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 0.9rem;
+                  }
+
+                  .body-type-btn.active {
+                    background: var(--accent-color);
+                    color: white;
+                    border-color: var(--accent-color);
+                  }
+
+                  .raw-body-section {
+                    border: 1px solid var(--border-color);
+                    border-radius: 4px;
+                    overflow: hidden;
+                  }
+
+                  .raw-body-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 8px 12px;
+                    background: var(--background-secondary);
+                    border-bottom: 1px solid var(--border-color);
+                  }
+
+                  .format-json-btn {
+                    padding: 4px 8px;
+                    background: var(--accent-color);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 0.8rem;
+                    cursor: pointer;
+                  }
+
+                  .raw-body-editor {
+                    width: 100%;
+                    min-height: 300px;
+                    padding: 12px;
+                    background: var(--background-primary);
+                    color: var(--text-primary);
+                    border: none;
+                    font-family: monospace;
+                    font-size: 0.9rem;
+                    line-height: 1.5;
+                    resize: vertical;
+                  }
+
+                  .raw-body-editor:focus {
+                    outline: none;
+                  }
+                `}
+                </style>
+
+                {activeRequestTab === 'params' && (
+                  <div className="request-tab-content">
+                    {/* Add API URL config at the top of params tab */}
+                    <div className="api-config-summary">
+                      <div className="api-config-row">
+                        <span className="api-config-label">API Base URL:</span>
+                        <span className="api-config-value">{apiBaseUrl || 'Not configured'}</span>
+                        <button 
+                          className="small-config-button"
+                          onClick={toggleApiConfigModal}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {activeEndpoint === 'getEmployeeById' && apiBaseUrl && (
+                      <div className="api-config-card">
+                        <div className="api-config-header">
+                          <h3>API Configuration</h3>
+                          <div className="api-badge">LIVE</div>
+                        </div>
+                        
+                        <div className="config-field-container">
+                          <label className="config-field-label">
+                            API Base URL
+                          </label>
+                          {isEditingApiConfig ? (
+                            <div className="config-input-group">
+                              <input
+                                type="text"
+                                className="config-input"
+                                value={apiBaseUrl}
+                                onChange={(e) => setApiBaseUrl(e.target.value)}
+                                placeholder="Enter API base URL (e.g., https://hrms-api.xpectrum-ai.com/hrms/api/v1)"
+                              />
+                              <button
+                                className="config-edit-btn save"
+                                onClick={() => setIsEditingApiConfig(false)}
+                              >
+                                Save
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="config-input-group">
+                              <input
+                                type="text"
+                                className="config-input"
+                                value={apiBaseUrl}
+                                disabled
+                              />
+                              <button
+                                className="config-edit-btn"
+                                onClick={() => setIsEditingApiConfig(true)}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          )}
+                          <p className="config-description">
+                            Base URL for the API endpoint (without trailing slash)
+                          </p>
+                        </div>
+                        
+                        <div className="config-field-container">
+                          <label className="config-field-label">Employee ID</label>
+                          <div className="config-input-group">
+                            <input
+                              type="text"
+                              className="config-input"
+                              value={realEmployeeId}
+                              onChange={(e) => setRealEmployeeId(e.target.value)}
+                              placeholder="Enter employee ID (e.g., EM37938)"
+                            />
+                          </div>
+                          <p className="config-description">
+                            The unique identifier for the employee record to retrieve
+                          </p>
+                        </div>
+
+                        <div className="config-action-container">
+                          <button 
+                            className="test-api-button"
+                            onClick={() => {
+                              // Start loading immediately
+                              setIsLoading(true);
+                              // Handle API call with slight delay to allow UI to update
+                              setTimeout(loadRealEmployeeData, 10);
+                            }}
+                          >
+                            <span className="test-icon">⟳</span>
+                            Test API
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {currentEndpoint.url.includes('{employee_id}') && (
+                      <div className="path-params-section">
+                        <h3>Path Parameters</h3>
+                        <div className="try-it-form-group">
+                          <label htmlFor="employee-id">employee_id</label>
+                          <input
+                            type="text"
+                            id="employee-id"
+                            value={activeEndpoint === 'getEmployeeById' && apiBaseUrl ? realEmployeeId : (requestParams.employee_id || '')}
+                            onChange={(e) => {
+                              if (activeEndpoint === 'getEmployeeById' && apiBaseUrl) {
+                                setRealEmployeeId(e.target.value);
+                              }
+                              updateRequestParam('employee_id', e.target.value);
+                            }}
+                            placeholder="Enter employee ID (e.g. EMP001)"
+                          />
+                          <div className="param-description">
+                            {activeEndpoint === 'getEmployeeById' && apiBaseUrl 
+                              ? "Employee ID from the API (e.g. EM37938)" 
+                              : "Required path parameter for identifying the employee"}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {currentEndpoint.queryParams.length > 0 && (
+                      <div className="query-params-section">
+                        <h3>Query Parameters</h3>
+                        {currentEndpoint.queryParams.map((param, index) => (
+                          <div className="try-it-form-group" key={index}>
+                            <div className="param-header">
+                              <label htmlFor={`param-${param.name}`}>
+                                {param.name}
+                              </label>
+                              {param.required && <span className="required-badge">required</span>}
+                            </div>
+                            <input
+                              type={param.type === 'integer' || param.type === 'number' ? 'number' : 'text'}
+                              id={`param-${param.name}`}
+                              value={requestParams[param.name] || ''}
+                              onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                              placeholder={param.example ? `Enter ${param.name} (${param.example.replace('Example: ', '')})` : `Enter ${param.name}`}
+                            />
+                            <div className="param-description">{param.description || `${param.type} - Optional query parameter`}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {activeRequestTab === 'headers' && (
+                  <div className="try-it-section">
+                    <h3>HTTP Headers</h3>
+                    <div className="param-description">Headers are sent with every request to authenticate and provide additional context.</div>
+                    <div className="headers-table">
+                      <div className="headers-row header">
+                        <div className="header-key">Key</div>
+                        <div className="header-value">Value</div>
+                        <div className="header-actions"></div>
+                      </div>
+                      
+                      {Object.entries(requestHeaders).map(([key, value], index) => (
+                        <div className="headers-row" key={index}>
+                          <div className="header-key">
+                            <input 
+                              type="text" 
+                              value={key} 
+                              onChange={(e) => {
+                                const newKey = e.target.value;
+                                const headers = { ...requestHeaders };
+                                delete headers[key];
+                                headers[newKey] = value;
+                                setRequestHeaders(headers);
+                              }}
+                              placeholder="Header name"
+                            />
+                          </div>
+                          <div className="header-value">
+                            <input 
+                              type="text" 
+                              value={value} 
+                              onChange={(e) => addRequestHeader(key, e.target.value)}
+                              placeholder="Header value"
+                            />
+                          </div>
+                          <div className="header-actions">
+                            <button 
+                              className="remove-header-btn" 
+                              onClick={() => removeRequestHeader(key)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="add-header-row">
+                        <button 
+                          className="add-header-btn"
+                          onClick={() => addRequestHeader(`Header-${Object.keys(requestHeaders).length + 1}`, '')}
+                        >
+                          Add Header
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {activeRequestTab === 'body' && ['POST', 'PUT', 'PATCH'].includes(currentEndpoint.method) && (
+                  <div className="try-it-section">
+                    <h3>Request Body</h3>
+                    <div className="body-type-selector">
+                      <button 
+                        className={`body-type-btn ${bodyType === 'form' ? 'active' : ''}`}
+                        onClick={() => setBodyType('form')}
+                      >
+                        Form
+                      </button>
+                      <button 
+                        className={`body-type-btn ${bodyType === 'raw' ? 'active' : ''}`}
+                        onClick={() => {
+                          setBodyType('raw');
+                          
+                          // Generate a default template when switching to raw mode
+                          if (!rawBody || rawBody.trim() === '') {
+                            const templateJson = generateJsonTemplate();
+                            setRawBody(templateJson);
+                          }
+                        }}
+                      >
+                        Raw
+                      </button>
+                    </div>
+                    
+                    {bodyType === 'form' && (
+                      <div className="params-table">
+                        <div className="param-row header">
+                          <div className="param-name">Parameter</div>
+                          <div className="param-value">Value</div>
+                          <div className="param-type">Type</div>
+                          <div className="param-required">Required</div>
+                          </div>
+                        {currentEndpoint.bodyParams && currentEndpoint.bodyParams.map((param, index) => (
+                          <div className="param-row" key={index}>
+                            <div className="param-name">
+                                {param.name}
+                              {param.required && <span className="required-badge">*</span>}
+                            </div>
+                            <div className="param-value">
+                              <input
+                                type={param.type === 'password' ? 'password' : 'text'}
+                                className="param-input"
+                                value={requestParams[param.name] || ''}
+                                onChange={(e) => updateRequestParam(param.name, e.target.value)}
+                                placeholder={param.example || `Enter ${param.name}`}
+                              />
+                              </div>
+                            <div className="param-type">{param.type}</div>
+                            <div className="param-required">{param.required ? 'Yes' : 'No'}</div>
+                            {param.description && (
+                              <div className="param-description">
+                                <span className="info-icon" title={param.description}>ℹ️</span>
+                                <div className="param-description-tooltip">{param.description}</div>
+                              </div>
+                            )}
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                    
+                    {bodyType === 'raw' && (
+                      <div className="raw-body-editor">
+                        <div className="raw-body-hint" style={{
+                          marginBottom: "8px",
+                          fontSize: "13px",
+                          color: "var(--text-muted)",
+                          padding: "8px 12px",
+                          backgroundColor: "var(--background-secondary)",
+                          borderRadius: "4px",
+                          border: "1px solid var(--border-color)"
+                        }}>
+                          <strong>Tip:</strong> Fill in the values between quotes for the fields you want to include in your request.
+                          <button 
+                            style={{
+                              marginLeft: "10px",
+                              padding: "3px 8px",
+                              fontSize: "12px",
+                              backgroundColor: "var(--accent-color)",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              cursor: "pointer"
+                            }}
+                            onClick={() => {
+                              const templateJson = generateJsonTemplate();
+                              setRawBody(templateJson);
+                            }}
+                          >
+                            Generate Template
+                          </button>
+                        </div>
+                        <textarea
+                          className="raw-body-textarea"
+                          value={rawBody}
+                          onChange={(e) => setRawBody(e.target.value)}
+                          placeholder="Enter raw JSON body"
+                          spellCheck="false"
+                          style={{
+                            minHeight: "350px",
+                            fontSize: "14px",
+                            fontFamily: "'Fira Code', monospace",
+                            lineHeight: "1.5",
+                            padding: "15px",
+                            width: "100%",
+                            border: "1px solid var(--border-color)",
+                            borderRadius: "4px",
+                            backgroundColor: "var(--input-bg)",
+                            color: "var(--text-color)",
+                            boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.1)"
+                          }}
+                        />
+                        <div className="raw-body-format-btn" onClick={() => {
+                          try {
+                            const formatted = JSON.stringify(JSON.parse(rawBody), null, 2);
+                            setRawBody(formatted);
+                          } catch (error) {
+                            // If JSON is invalid, don't format
+                            console.error('Invalid JSON:', error);
+                          }
+                        }}>
+                          Format
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {activeRequestTab === 'auth' && (
+                  <div className="try-it-section">
+                    <h3>API Key Authentication</h3>
+                    <div className="try-it-form-group">
+                      <label htmlFor="api-key">API Key</label>
+                      <input
+                        type="text"
+                        id="api-key"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="Enter your API key (required for all requests)"
+                      />
+                      <div className="auth-description">
+                        <strong>Required for all API calls.</strong> The API key authenticates your requests and determines your access level. Add the API key as a header with the name 'X-API-KEY'.
+                      </div>
+                    </div>
+                    <div className="environment-info">
+                      <h4>Current Environment: {activeEnvironment}</h4>
+                      <div className="environment-variables">
+                        <div className="environment-variable">
+                          <span className="env-var-name">Base URL:</span>
+                          <span className="env-var-value">{environments.find(e => e.name === activeEnvironment)?.variables.baseUrl || ''}</span>
+                        </div>
+                      </div>
+                      <button 
+                        className="change-environment-btn"
+                        onClick={toggleEnvironmentModal}
+                      >
+                        Change Environment
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Response Section */}
+                {(apiResponse || apiError || isLoading) && (
+                  <div className="try-it-response-section">
+                    <div className="response-header">
+                      <h3>Response</h3>
+                      {responseDetails && (
+                        <div className="response-meta">
+                          <span className={`status-code ${responseDetails.status >= 200 && responseDetails.status < 300 ? 'success' : 'error'}`}>
+                            {responseDetails.status} {responseDetails.statusText}
+                          </span>
+                          <span className="response-time">{responseDetails.time} ms</span>
+                          <span className="response-size">{responseDetails.size}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {isLoading && (
+                      <div className="response-loading">
+                        <div className="loading-spinner"></div>
+                        <div>Fetching response...</div>
+                      </div>
+                    )}
+                    
+                    {apiError && !isLoading && (
+                      <div className="response-error">
+                        <h4>Error</h4>
+                        <div className="error-message">{apiError}</div>
+                      </div>
+                    )}
+                    
+                    {apiResponse && !isLoading && (
+                      <div className="response-body">
+                        <div className="response-body-header">
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span>Response Body</span>
+                            {isResponseFromApi && (
+                              <span style={{ 
+                                marginLeft: '8px',
+                                fontSize: '0.7rem', 
+                                padding: '0.35em 0.65em', 
+                                backgroundColor: 'rgba(0, 180, 60, 0.8)', 
+                                color: 'white',
+                                borderRadius: '4px'
+                              }}>
+                                API Data
+                              </span>
+                            )}
+                          </div>
+                          <button 
+                            className={`copy-response-btn ${copiedCode ? 'copied' : ''}`}
+                            onClick={() => copyCodeToClipboard(JSON.stringify(apiResponse, null, 2))}
+                          >
+                            {copiedCode ? 'Copied!' : 'Copy'}
+                          </button>
+                        </div>
+                        <pre className="response-json">
+                          {JSON.stringify(apiResponse, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <style>
+        {`
+          .api-panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 99;
+            animation: fadeIn 0.3s ease;
+          }
+
+          .api-testing-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 600px;
+            height: 100vh;
+            background: #1a1a1a;
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            z-index: 100;
+            animation: slideIn 0.3s ease;
+            box-shadow: -4px 0 15px rgba(0, 0, 0, 0.5);
+          }
+
+          .api-testing-panel-content {
+            position: relative;
+            z-index: 101;
+            background: #1a1a1a;
+            padding: 20px;
+            height: 100%;
+            overflow-y: auto;
+          }
+
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+
+          @keyframes slideIn {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+
+          /* Prevent scrolling of main content when panel is open */
+          .api-doc-container.with-api-panel {
+            overflow: hidden;
+          }
+
+          /* Make sure the background stays dark in both themes */
+          .light-theme .api-panel-overlay,
+          .dark-theme .api-panel-overlay {
+            background-color: rgba(0, 0, 0, 0.75);
+          }
+
+          /* Adjust responsive behavior */
+          @media (max-width: 1200px) {
+            .api-testing-panel {
+              width: 500px;
+            }
+            
+            .api-doc-container.with-api-panel .api-content {
+              width: calc(100% - 500px);
+            }
+          }
+
+          @media (max-width: 992px) {
+            .api-testing-panel {
+              width: 100%;
+            }
+            
+            .api-doc-container.with-api-panel .api-content {
+              width: 100%;
+            }
+          }
         `}
       </style>
     </div>
